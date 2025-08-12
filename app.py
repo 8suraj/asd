@@ -43,11 +43,9 @@ import random
 import requests
 import secrets
 import pytz
-import uuid
-
 
 # semantic search library imports
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 
 
@@ -86,567 +84,22 @@ embeddings = HuggingFaceBgeEmbeddings(model_name="BAAI/bge-large-en")
 IPINFO_TOKEN = "c4586694fdba29"
 
 
-## report generation library & function code starts here
-
-# report generation library imports
-from fpdf import FPDF
-import torch
-import spacy
-import google.generativeai as genai
-from collections import Counter
-from langchain_qdrant import QdrantVectorStore, FastEmbedSparse, RetrievalMode
-from sentence_transformers import CrossEncoder
-import ast
-from math import cos, sin, radians
-
-
-# ------------------ Gemini Setup ------------------
-# genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY="))
-gemini_model = genai.GenerativeModel("gemini-2.5-flash")
-
-# ------------------ Load Models ------------------
-nlp = spacy.load("en_core_web_trf")
-embedding_model = HuggingFaceBgeEmbeddings(
-    model_name="BAAI/bge-large-en",
-    # model_kwargs={"device": "cuda:0"},
-    model_kwargs={"device": "cpu"},
-    encode_kwargs={"normalize_embeddings": True},
-)
-sparse_embeddings = FastEmbedSparse(model_name="Qdrant/bm25")
-reranker_model = CrossEncoder(
-    model_name_or_path="BAAI/bge-reranker-large", max_length=128
-)
-
-
-# ------------------ Helper Functions ------------------
-
-
-def parse_date_safe(date_str):
-    for fmt in ("%Y-%m-%d", "%B %d, %Y"):
-        try:
-            return datetime.datetime.strptime(date_str.strip(), fmt)
-        except ValueError:
-            continue
-    return None
-
-
-def clean_invalid_json(s):
-    return re.sub(r"[\x00-\x1F\x7F]", "", s)
-
-
-def extract_named_entities(text):
-    doc = nlp(text)
-    return {
-        "persons": [ent.text for ent in doc.ents if ent.label_ == "PERSON"],
-        "organizations": [ent.text for ent in doc.ents if ent.label_ == "ORG"],
-        "locations": list(
-            set([ent.text for ent in doc.ents if ent.label_ in {"GPE", "LOC"}])
-        ),
-    }
-
-
-def extract_topics(summary):
-    """Extracts list items after 'Main Topics' section from summary text."""
-    topics = re.findall(r"\*\s+(.*?)($|\n|\*)", summary)
-    cleaned = [t[0].strip() for t in topics if len(t[0].strip()) > 2]
-    return list(dict.fromkeys(cleaned))
-
-
-def extract_key_events(summary):
-    """Extracts events with dates from summary text."""
-    events = []
-    matches = re.findall(r"\*\*\s*(.*?)\s*\*\*:\s*(.*?)($|\n|\*)", summary, re.DOTALL)
-    for m in matches:
-        date = m[0].strip()
-        event = m[1].strip()
-        if date and event:
-            events.append({"date": date, "event": event})
-    return events
-
-
-def extract_tenders(summary):
-    """Extracts tender information from the summary."""
-    tenders = []
-    matches = re.findall(
-        r"Tender Title: (.*?)\nIssue Date: (.*?)\nClosing Date: (.*?)\nLocation: (.*?)\nDescription: (.*?)\nStatus: (.*?)\nSource Link: (.*?)\n",
-        summary,
-        re.DOTALL,
-    )
-    for m in matches:
-        tenders.append(
-            {
-                "title": m[0].strip(),
-                "issue_date": m[1].strip(),
-                "closing_date": m[2].strip(),
-                "location": m[3].strip(),
-                "description": m[4].strip(),
-                "status": m[5].strip(),
-                "source_link": m[6].strip(),
-            }
-        )
-    return tenders
-
-
-def load_reference_file(path):
-    with open(path, "r", encoding="utf-8") as f:
-        lines = f.read().splitlines()
-    province_dict, current = {}, None
-    for line in lines:
-        line = line.strip()
-        if re.match(r"^\d+\.\s*(\w+)", line):
-            current = re.sub(r"^\d+\.\s*", "", line)
-            province_dict[current] = [current]
-        elif line and current:
-            province_dict[current].append(re.split(r"\(", line)[0].strip())
-    return province_dict
-
-
-def rerank_docs(query, docs):
-    pairs = [
-        (query, d if isinstance(d, str) else getattr(d, "page_content", ""))
-        for d in docs
-    ]
-    torch.cuda.empty_cache()
-    scores = reranker_model.predict(pairs)
-    torch.cuda.empty_cache()
-    return sorted(zip(docs, scores), key=lambda x: x[1], reverse=True)
-
-
-# ------------------ Retrieval ------------------
-def get_relevant_content(question, score_threshold=0.7, top_k=50, time_frame=None):
-    store = QdrantVectorStore(
-        client=qdrant_client,
-        collection_name="report_generation_content",
-        embedding=embedding_model,
-        sparse_embedding=sparse_embeddings,
-        retrieval_mode=RetrievalMode.HYBRID,
-    )
-    results = store.similarity_search_with_score(query=question, k=top_k)
-    torch.cuda.empty_cache()
-
-    if time_frame and len(time_frame) == 2:
-        from_date, to_date = parse_date_safe(time_frame[0]), parse_date_safe(
-            time_frame[1]
-        )
-    else:
-        from_date = to_date = None
-
-    final_docs, metadata = [], []
-    for doc, score in results:
-        if score <= score_threshold:
-            continue
-        try:
-            parsed = ast.literal_eval(doc.page_content.strip())
-            content = parsed.get("content: ", "")
-            meta = parsed.get("metadata", {})
-            doc_date = parse_date_safe(meta.get("Time_frame", ""))
-            if (
-                from_date
-                and to_date
-                and (not doc_date or not (from_date <= doc_date <= to_date))
-            ):
-                continue
-            if content:
-                final_docs.append(content)
-                metadata.append(meta.get("source", ""))
-        except Exception:
-            continue
-
-    if not final_docs:
-        return "", set()
-
-    ranked = rerank_docs(question, final_docs)
-    top_docs, top_meta = [], []
-    for d, s in ranked:
-        if s > score_threshold:
-            idx = final_docs.index(d)
-            top_docs.append(d)
-            top_meta.append(metadata[idx])
-
-    if not top_docs:
-        return "", set()
-
-    return ", ".join(set(top_docs[:10])).replace("\\", ""), set(top_meta[:10])
-
-
-# ------------------ Report Generation ------------------
-def generate_report(question, content, sources, time_frame, report_title_value):
-    prompt = f"""
-You are an AI assistant tasked with summarizing and structuring a report.
-
-Keyword(s): {question}
-Content: {content}
-
-Based on the content, provide a comprehensive report summary.
-After the summary, list the main topics as a bulleted list, key events with dates, and any tender information.
-For main topics, use a format like: `* Topic 1\n* Topic 2`.
-For key events, use a format like: `**Date**: Event Description`.
-For tender information, use a format like: `Tender Title: [title]\nIssue Date: [date]\nClosing Date: [date]\nLocation: [location]\nDescription: [description]\nStatus: [status]\nSource Link: [link]`.
-
-Return the summary, main topics, key events with dates, tender info if available.
-"""
-    response = gemini_model.generate_content(prompt)
-    summary = clean_invalid_json(response.text)
-
-    ner = extract_named_entities(summary)
-
-    top_topics = extract_topics(summary)
-    key_events = extract_key_events(summary)
-    tenders = extract_tenders(summary)
-
-    return {
-        "report_title": report_title_value.capitalize(),
-        "keywords": question,
-        "time_frame": (
-            f"{time_frame[0]} - {time_frame[1]}" if time_frame else "Not specified"
-        ),
-        "generated_on": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "sources": list(sources),
-        "summary": summary,
-        "total_relevant_items": len(content.split(",")),
-        "geographical_coverage": ner.get("locations", []),
-        "top_topics": top_topics,
-        "key_events": key_events,
-        "tenders": tenders,
-        "top_locations": ner.get("locations", []),
-        "top_entities": ner.get("organizations", []),
-    }
-
-
-# --------- Fix for long unbreakable words ---------
-def safe_text_for_pdf(text):
-    text = re.sub(r"(\*\*[^*]+:\*\*)", r"\1 ", text)  # Add space after **Subtopic:**
-    text = text.replace("***", "** *")  # Fix triple asterisk runs
-    return text
-
-
-# --------- Detect subtopics ---------
-def parse_subtopics(text):
-    parts = re.split(r"\*\*(.*?)\*\*", text)
-    result = []
-    current_label = None
-    for i, part in enumerate(parts):
-        if i % 2 == 1:
-            current_label = part.strip().rstrip(":")
-        else:
-            if current_label:
-                result.append((current_label, part.strip()))
-                current_label = None
-    return result
-
-
-# --------- Write subtopics & handle bullets ---------
-def write_subtopics(pdf, text):
-    text = safe_text_for_pdf(text)
-    subtopics = parse_subtopics(text)
-    for label, content in subtopics:
-        # Subtopic heading
-        pdf.set_font("DejaVu", "B", 11)
-        pdf.multi_cell(0, 6, f"{label}:")
-        pdf.set_font("DejaVu", "", 11)
-
-        # Lines under subtopic
-        for para in content.split("\n"):
-            para = para.strip()
-            if not para:
-                continue
-            if para.startswith("○"):
-                parts = para[1:].strip().split(":", 1)
-                if len(parts) == 2:
-                    pdf.sub_bullet(parts[0] + ":", parts[1].strip())
-                else:
-                    pdf.sub_bullet(para[1:].strip())
-            elif para.startswith("●"):
-                parts = para[1:].strip().split(":", 1)
-                if len(parts) == 2:
-                    pdf.bullet(parts[0] + ":", parts[1].strip())
-                else:
-                    pdf.bullet(para[1:].strip())
-            elif para.startswith("* "):
-                pdf.numbered_list([para[2:].strip()])
-            else:
-                pdf.set_x(pdf.l_margin + 8)
-                pdf.multi_cell(0, 6, para)
-                pdf.ln(1)
-
-
-# ---------- PDF Class ----------
-class PDFReport(FPDF):
-    def __init__(self, data, company_logo_path=None, product_logo_path=None):
-        super().__init__()
-        self.set_auto_page_break(auto=True, margin=15)
-
-        self.add_font(
-            "DejaVu", "", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", uni=True
-        )
-        self.add_font(
-            "DejaVu",
-            "B",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-            uni=True,
-        )
-        self.add_font(
-            "DejaVu",
-            "I",
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
-            uni=True,
-        )
-        self.set_font("DejaVu", "", 11)
-
-        self.data = data  # store the report data
-        self.company_logo_path = company_logo_path
-        self.product_logo_path = product_logo_path
-
-    # Transparency support
-    def set_alpha(self, alpha, blend_mode="Normal"):
-        """Set transparency for watermark"""
-        # Add new ExtGState for alpha
-        gs_id = len(getattr(self, "_extgstates", [])) + 1
-        if not hasattr(self, "_extgstates"):
-            self._extgstates = []
-        self._extgstates.append((alpha, blend_mode))
-        self._out(f"/GS{gs_id} gs")
-
-    def _putextgstates(self):
-        """Internal: write ExtGState definitions to PDF"""
-        for i, (alpha, blend_mode) in enumerate(self._extgstates, start=1):
-            self._newobj()
-            self._out("<< /Type /ExtGState")
-            self._out(f"/ca {alpha}")  # stroke alpha
-            self._out(f"/CA {alpha}")  # fill alpha
-            self._out(f"/BM /{blend_mode}")
-            self._out(">>")
-            self._out("endobj")
-            self._extgstates[i - 1] = i
-
-    def _putresourcedict(self):
-        super()._putresourcedict()
-        if hasattr(self, "_extgstates") and self._extgstates:
-            self._out("/ExtGState <<")
-            for i in range(len(self._extgstates)):
-                self._out(f"/GS{i+1} {self._extgstates[i]} 0 R")
-            self._out(">>")
-
-    def _putresources(self):
-        self._putextgstates()
-        super()._putresources()
-
-    # Rotation support
-    def rotate(self, angle, x=None, y=None):
-        """Rotate objects (for watermark slant)"""
-        if x is None:
-            x = self.x
-        if y is None:
-            y = self.y
-        angle = radians(angle)
-        c = cos(angle)
-        s = sin(angle)
-        cx = x * self.k
-        cy = (self.h - y) * self.k
-        self._out(
-            f"q {c:.5f} {s:.5f} {-s:.5f} {c:.5f} "
-            f"{cx - c * cx + s * cy:.5f} {cy - s * cx - c * cy:.5f} cm"
-        )
-
-    # Header with watermark + logos
-    def header(self):
-        # Save state before watermark
-        self._out("q")
-
-        # Product logo watermark - big, slanted, transparent
-        if self.product_logo_path and os.path.exists(self.product_logo_path):
-            self.set_alpha(0.05)
-            self.image(
-                self.product_logo_path, x=self.w / 2 - 60, y=self.h / 2 - 60, w=120
-            )
-            self.set_alpha(0.08)
-
-        # Restore state so rotation doesn't affect text
-        self._out("Q")
-
-        # Company logo - small top-right
-        if self.company_logo_path and os.path.exists(self.company_logo_path):
-            self.image(self.company_logo_path, x=self.w - 20, y=6, w=10)
-
-        # Report title
-        if self.page_no() == 1:
-            self.set_font("DejaVu", "B", 16)
-            self.cell(
-                0,
-                10,
-                self.data.get("report_title", ""),
-                align="C",
-                new_x="LMARGIN",
-                new_y="NEXT",
-            )
-            # self.cell(0, 10, self.data.get("report_title", ""), align="C")
-            self.ln(5)
-        else:
-            self.ln(15)
-
-    # Footer with page numbers
-    def footer(self):
-        self.set_y(-15)
-        self.set_font("DejaVu", "I", 9)
-        self.cell(0, 10, f"Page {self.page_no()}", align="C")
-
-    # Section title
-    def section_title(self, title):
-        self.set_font("DejaVu", "B", 14)
-        self.cell(0, 8, title, new_x="LMARGIN", new_y="NEXT")
-        # self.cell(0, 8, title)
-        self.ln(2)
-        self.set_font("DejaVu", "", 11)
-
-    # Bullet point
-    def bullet(self, label, value="", indent=0, bold_label=True):
-        self.set_x(self.l_margin + indent)
-        if bold_label:
-            self.set_font("DejaVu", "B", 11)
-            self.write(6, f"● {label}")
-            self.set_font("DejaVu", "", 11)
-            if value:
-                self.write(6, f" {value}")
-        else:
-            self.set_font("DejaVu", "", 11)
-            self.write(6, f"● {label} {value}")
-        self.ln(6)
-
-    # Sub bullet
-    def sub_bullet(self, label, value="", indent=10, bold_label=True):
-        self.set_x(self.l_margin + indent)
-        if bold_label:
-            self.set_font("DejaVu", "B", 11)
-            self.write(6, f"○ {label}")
-            self.set_font("DejaVu", "", 11)
-            if value:
-                self.write(6, f" {value}")
-        else:
-            self.set_font("DejaVu", "", 11)
-            self.write(6, f"○ {label} {value}")
-        self.ln(6)
-
-    # Numbered list
-    def numbered_list(self, items, indent=10):
-        self.set_font("DejaVu", "", 11)
-        for i, item in enumerate(items, start=1):
-            self.set_x(self.l_margin + indent)
-            self.multi_cell(0, 6, f"{i}. {item}")
-            self.ln(1)
-
-
-USER_REPORTS_DIR = "user_generated_reports"
-
-
-# ---------- PDF Save Function ----------
-def save_report_pdf(data, filename="generated_report.pdf"):
-
-    # Ensure reports directory exists
-    os.makedirs(USER_REPORTS_DIR, exist_ok=True)
-
-    # Construct full file path
-    filepath = os.path.join(USER_REPORTS_DIR, filename)
-
-    company_logo = os.path.abspath(
-        "static/imgs/report_gen_images/pinaca_logo.jpeg"
-    )  # Path to small company logo (top-right)
-    product_logo = os.path.abspath(
-        "static/imgs/report_gen_images/inner_eye_logo.jpeg"
-    )  # Path to product logo (watermark)
-
-    if not os.path.exists(product_logo):
-        raise FileNotFoundError(f"Product logo not found: {product_logo}")
-
-    pdf = PDFReport(
-        data, company_logo_path=company_logo, product_logo_path=product_logo
-    )
-
-    pdf.add_page()
-    i = 0
-
-    # Remove Gemini placeholder lines
-    summary_text = data.get("summary", "")
-    summary_text = re.sub(
-        r"(Key Events with Dates:\s*No.*?(\n|$))", "", summary_text, flags=re.IGNORECASE
-    )
-    summary_text = re.sub(
-        r"(Tender Information:\s*No.*?(\n|$))", "", summary_text, flags=re.IGNORECASE
-    )
-
-    # 1. Introduction
-    i += 1
-    pdf.section_title(f"{i}. Introduction")
-    pdf.bullet("Keyword(s):", data.get("keywords", ""))
-    pdf.bullet("Time Frame:", data.get("time_frame", ""))
-    pdf.bullet("Report Generated On:", data.get("generated_on", ""))
-    pdf.bullet("Data Sources:", ", ".join(data.get("sources", [])))
-
-    # 2. Summary Overview
-    i += 1
-    pdf.section_title(f"{i}. Summary Overview")
-    write_subtopics(pdf, summary_text)
-    pdf.bullet("Total Relevant Items Found:", str(data.get("total_relevant_items", 0)))
-    pdf.bullet(
-        "Geographical Coverage:", ", ".join(data.get("geographical_coverage", []))
-    )
-    if data.get("top_topics"):
-        pdf.bullet("Top Topics Identified:")
-        pdf.numbered_list(data["top_topics"])
-
-    # 3. Key Events and Updates
-    if data.get("key_events"):
-        i += 1
-        pdf.section_title(f"{i}. Key Events and Updates (Chronological)")
-        for e in data["key_events"]:
-            pdf.sub_bullet("Date:", e.get("date", ""))
-            pdf.sub_bullet("Event:", e.get("event", ""))
-
-    # 4. Tender Information
-    if data.get("tenders"):
-        i += 1
-        pdf.section_title(f"{i}. Tender Information (if applicable)")
-        for t in data["tenders"]:
-            pdf.sub_bullet("Title:", t.get("title", ""))
-            pdf.sub_bullet("Issue Date:", t.get("issue_date", ""))
-            pdf.sub_bullet("Closing Date:", t.get("closing_date", ""))
-            pdf.sub_bullet("Location:", t.get("location", ""))
-            pdf.sub_bullet("Description:", t.get("description", ""))
-            pdf.sub_bullet("Status:", t.get("status", ""))
-            pdf.sub_bullet("Source Link:", t.get("source_link", ""))
-            pdf.ln(1)
-
-    # 5. Data Insights
-    if data.get("top_locations") or data.get("top_entities"):
-        i += 1
-        pdf.section_title(f"{i}. Data Insights")
-        if data.get("top_locations"):
-            pdf.bullet("Top Mentioned Locations:")
-            pdf.numbered_list(list(set(data["top_locations"])))
-        if data.get("top_entities"):
-            pdf.bullet("Top Mentioned Entities (Companies, Agencies, etc.):")
-            pdf.numbered_list(list(set(data["top_entities"])))
-
-    pdf.output(filepath)
-    return f"{filename}"
-
-
-## report generation library & function code ends here
-
-
-# private & public key loading for encription in JWT starts here
-# =========================================================
-
-with open("private_key_token.pem", "rb") as f:
-    private_token_key = serialization.load_pem_private_key(
-        f.read(), password=None, backend=default_backend()
-    )
-
-# Load the public key
-with open("public_key_token.pem", "rb") as f:
-    public_token_key = serialization.load_pem_public_key(
-        f.read(), backend=default_backend()
-    )
+# # private & public key loading for encription in JWT starts here
+# # =========================================================
+
+# with open('private_key_token.pem', 'rb') as f:
+#     private_token_key = serialization.load_pem_private_key(
+#         f.read(),
+#         password=None,
+#         backend=default_backend()
+#     )
+
+# # Load the public key
+# with open('public_key_token.pem', 'rb') as f:
+#     public_token_key = serialization.load_pem_public_key(
+#         f.read(),
+#         backend=default_backend()
+#     )
 
 # private & public key loading for encription in JWT ends here
 # =========================================================
@@ -654,9 +107,11 @@ with open("public_key_token.pem", "rb") as f:
 
 # Initialize JWT Manager
 app.config["JWT_SECRET_KEY"] = secrets.token_hex(40)
-app.config["JWT_PRIVATE_KEY"] = private_token_key
-app.config["JWT_PUBLIC_KEY"] = public_token_key
-app.config["JWT_ALGORITHM"] = "RS256"
+# app.config['JWT_PRIVATE_KEY'] = private_token_key
+# app.config['JWT_PUBLIC_KEY'] = public_token_key
+# app.config['JWT_ALGORITHM'] = 'RS256'
+app.config["JWT_SECRET_KEY"] = "122435e"
+app.config["JWT_ALGORITHM"] = "HS256"
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_COOKIE_SECURE"] = True
 app.config["JWT_COOKIE_HTTPONLY"] = True
@@ -673,10 +128,8 @@ china_map_geo_json_data = db["china_geo_json_map_data"]
 users_data = db["users_data"]
 special_report_data = db["special_report_data"]
 generate_report_data = db["generate_report_data"]
-user_report_data = db["user_report_data"]
 tenders_data = db["tenders_data"]
 trending_keywords_data = db["trending_keywords_data"]
-trending_keywords_pie_data = db["trending_keywords_pie_data"]
 vehicles_data = db["vehicles_data"]
 weapons_data = db["weapons_data"]
 commanders_data = db["commanders_profile_data"]
@@ -809,44 +262,6 @@ def generate_report_download(report_number):
         report_file_name = filename
         return send_from_directory(
             generate_report_dir, report_file_name, as_attachment=True
-        )
-
-
-# Set the directory where your reports are stored
-user_generated_report_dir = "user_generated_reports"
-
-
-# view generate report
-@app.route("/usrgnrpt/<report_number>")
-def user_generate_report_view(report_number):
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    # Validate the report_number to only allow valid characters (e.g., alphanumeric, hyphen, underscore)
-    if not re.match(r"^[a-zA-Z0-9_-]+$", report_number):
-        return jsonify({"error": "Invalid report number"}), 400
-
-    filename = report_number + ".pdf"
-
-    return send_from_directory(user_generated_report_dir, filename)
-
-
-# download generate report
-@app.route("/usrgnrptdwn/<report_number>", methods=["GET"])
-def user_generate_report_download(report_number):
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    # Validate the report_number to only allow valid characters (e.g., alphanumeric, hyphen, underscore)
-    if not re.match(r"^[a-zA-Z0-9_-]+$", report_number):
-        return jsonify({"error": "Invalid report number"}), 400
-
-    filename = report_number + ".pdf"
-
-    if report_number != "":
-        report_file_name = filename
-        return send_from_directory(
-            user_generated_report_dir, report_file_name, as_attachment=True
         )
 
 
@@ -1281,25 +696,54 @@ def validating_comment_and_sanitizing_comment(comment_value):
     return {"comment_validation": "true", "comment_value": sanitized_comment}
 
 
+# @app.route("/", methods=['GET'])
+# def index():
+
+#     # Get the real IP address for vps
+#     real_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+#     # Call the IPinfo API to get location data
+#     response = requests.get(f'https://ipinfo.io/{real_ip}/json?token={IPINFO_TOKEN}')
+
+#     if response.status_code == 200:
+#         data = response.json()
+#         country = data.get('country')
+
+#         # Redirect based on the country
+#         if country == 'IN':
+#             return render_template('index.html')
+#         else:
+#             return "", 404
+#     return "", 404
+
+
 @app.route("/", methods=["GET"])
 def index():
+    return render_template("index.html")
 
-    # Get the real IP address for vps
-    real_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
 
-    # Call the IPinfo API to get location data
-    response = requests.get(f"https://ipinfo.io/{real_ip}/json?token={IPINFO_TOKEN}")
+# @app.route("/auth", methods=['GET'])
+# def authentication():
+#     if 'email' in session:
+#         return redirect(url_for('home'))
 
-    if response.status_code == 200:
-        data = response.json()
-        country = data.get("country")
+#     # Get the real IP address for vps
+#     real_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+#     # real_ip = "183.83.155.83"
 
-        # Redirect based on the country
-        if country == "IN":
-            return render_template("index.html")
-        else:
-            return "", 404
-    return "", 404
+#     # Call the IPinfo API to get location data
+#     response = requests.get(f'https://ipinfo.io/{real_ip}/json?token={IPINFO_TOKEN}')
+
+#     if response.status_code == 200:
+#         data = response.json()
+#         country = data.get('country')
+
+#         # Redirect based on the country
+#         if country == 'IN':
+#             return render_template('login.html')
+#         else:
+#             return "", 404
+#     return "", 404
 
 
 @app.route("/auth", methods=["GET"])
@@ -1307,23 +751,7 @@ def authentication():
     if "email" in session:
         return redirect(url_for("home"))
 
-    # Get the real IP address for vps
-    real_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    # real_ip = "183.83.155.83"
-
-    # Call the IPinfo API to get location data
-    response = requests.get(f"https://ipinfo.io/{real_ip}/json?token={IPINFO_TOKEN}")
-
-    if response.status_code == 200:
-        data = response.json()
-        country = data.get("country")
-
-        # Redirect based on the country
-        if country == "IN":
-            return render_template("login.html")
-        else:
-            return "", 404
-    return "", 404
+    return render_template("login.html")
 
 
 @app.route("/rfactk", methods=["POST"])
@@ -1363,110 +791,172 @@ def jwttokenrefresh():
     return response
 
 
+# @app.route("/login", methods=['POST'])
+# def login():
+#     email = request.json['email']
+#     password = request.json['password']
+
+
+#     # Get the real IP address for vps
+#     real_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+#     # Call the IPinfo API to get location data
+#     response = requests.get(f'https://ipinfo.io/{real_ip}/json?token={IPINFO_TOKEN}')
+
+#     if response.status_code == 200:
+#         data = response.json()
+#         country = data.get('country')
+
+#         # Redirect based on the country
+#         if country == 'IN':
+#             # regex pattern to validate email
+#             email_regex = r'^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})*(?:\.[a-zA-Z]{2,})*$'
+
+#             # Validate the email using the regex pattern
+#             if re.match(email_regex, email):
+#                 user = users.find_one({"email": email})
+
+#                 if user and bcrypt.checkpw(password.encode('utf-8'), user['password']):
+#                     # Format the current date and time
+#                     formatted_time = datetime.datetime.now().strftime('%Y-%m-%d %I:%M %p')
+
+#                     # Get the real IP address for vps
+#                     real_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+
+#                     # store all login and logout entries for seperate user
+#                     user_event_document = {
+#                         'type': 'login',
+#                         'login_time': formatted_time,
+#                         'ip_address': real_ip,
+#                         'user_agent': request.user_agent.string
+#                     }
+
+#                     # Update the user_event_document by pushing the new event into the events array at the beginning
+#                     users_auth_history.update_one(
+#                         {'email': email,},
+#                         {
+#                             '$setOnInsert': {'email': email,},
+#                             '$push': {
+#                                 'events': {
+#                                     '$each': [user_event_document],
+#                                     '$position': 0  # Insert at the beginning of the array
+#                                 }
+#                             }
+#                         },
+#                         upsert=True
+#                     )
+
+#                     access_token = create_access_token(identity=email)
+#                     refresh_token = create_refresh_token(identity=email)
+
+#                     session.permanent = True
+#                     session['email'] = email
+#                     session['login_time'] = datetime.datetime.now()
+
+#                     # Set the refresh token & access token in an HTTP-only cookie
+#                     response = jsonify({'success': True})
+
+#                     # Set expiration time for cookies
+#                     max_age = datetime.timedelta(days=1)  # Set to your desired duration
+#                     set_access_cookies(response, access_token, max_age=max_age)
+#                     set_refresh_cookies(response, refresh_token, max_age=max_age)
+
+
+#                     # Update the user document with the refresh token
+#                     users.update_one({"email": email}, {'$set': {'refresh_token': refresh_token, 'refresh_token_status': 'active'}})
+#                     return response, 200
+#                 else:
+#                     return jsonify({'success': False, 'error': 'Invalid credentials'}), 401
+#             else:
+#                 return "Invalid email", 401
+#         else:
+#             return "", 404
+#     else:
+#         return "", 404
+
+
 @app.route("/login", methods=["POST"])
 def login():
     email = request.json["email"]
     password = request.json["password"]
 
-    # Get the real IP address for vps
-    real_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    # regex pattern to validate email
+    email_regex = r"^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})*(?:\.[a-zA-Z]{2,})*$"
 
-    # Call the IPinfo API to get location data
-    response = requests.get(f"https://ipinfo.io/{real_ip}/json?token={IPINFO_TOKEN}")
+    # Validate the email using the regex pattern
+    if re.match(email_regex, email):
+        user = users.find_one({"email": email})
 
-    if response.status_code == 200:
-        data = response.json()
-        country = data.get("country")
+        if user and bcrypt.checkpw(password.encode("utf-8"), user["password"]):
+            # Format the current date and time
+            formatted_time = datetime.datetime.now().strftime("%Y-%m-%d %I:%M %p")
 
-        # Redirect based on the country
-        if country == "IN":
-            # regex pattern to validate email
-            email_regex = r"^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:\.[a-zA-Z]{2,})*(?:\.[a-zA-Z]{2,})*$"
+            # Get the real IP address for vps
+            real_ip = request.headers.get("X-Forwarded-For", request.remote_addr)
 
-            # Validate the email using the regex pattern
-            if re.match(email_regex, email):
-                user = users.find_one({"email": email})
+            # store all login and logout entries for seperate user
+            user_event_document = {
+                "type": "login",
+                "login_time": formatted_time,
+                "ip_address": real_ip,
+                "user_agent": request.user_agent.string,
+            }
 
-                if user and bcrypt.checkpw(password.encode("utf-8"), user["password"]):
-                    # Format the current date and time
-                    formatted_time = datetime.datetime.now().strftime(
-                        "%Y-%m-%d %I:%M %p"
-                    )
+            # Update the user_event_document by pushing the new event into the events array at the beginning
+            users_auth_history.update_one(
+                {
+                    "email": email,
+                },
+                {
+                    "$setOnInsert": {
+                        "email": email,
+                    },
+                    "$push": {
+                        "events": {
+                            "$each": [user_event_document],
+                            "$position": 0,  # Insert at the beginning of the array
+                        }
+                    },
+                },
+                upsert=True,
+            )
 
-                    # Get the real IP address for vps
-                    real_ip = request.headers.get(
-                        "X-Forwarded-For", request.remote_addr
-                    )
+            access_token = create_access_token(identity=email)
+            refresh_token = create_refresh_token(identity=email)
 
-                    # store all login and logout entries for seperate user
-                    user_event_document = {
-                        "type": "login",
-                        "login_time": formatted_time,
-                        "ip_address": real_ip,
-                        "user_agent": request.user_agent.string,
+            session.permanent = True
+            session["email"] = email
+            session["login_time"] = datetime.datetime.now()
+
+            # Set the refresh token & access token in an HTTP-only cookie
+            response = jsonify({"success": True})
+
+            # Set expiration time for cookies
+            max_age = datetime.timedelta(days=1)  # Set to your desired duration
+            set_access_cookies(response, access_token, max_age=max_age)
+            set_refresh_cookies(response, refresh_token, max_age=max_age)
+
+            # Update the user document with the refresh token
+            users.update_one(
+                {"email": email},
+                {
+                    "$set": {
+                        "refresh_token": refresh_token,
+                        "refresh_token_status": "active",
                     }
-
-                    # Update the user_event_document by pushing the new event into the events array at the beginning
-                    users_auth_history.update_one(
-                        {
-                            "email": email,
-                        },
-                        {
-                            "$setOnInsert": {
-                                "email": email,
-                            },
-                            "$push": {
-                                "events": {
-                                    "$each": [user_event_document],
-                                    "$position": 0,  # Insert at the beginning of the array
-                                }
-                            },
-                        },
-                        upsert=True,
-                    )
-
-                    access_token = create_access_token(identity=email)
-                    refresh_token = create_refresh_token(identity=email)
-
-                    session.permanent = True
-                    session["email"] = email
-                    session["login_time"] = datetime.datetime.now()
-
-                    # Set the refresh token & access token in an HTTP-only cookie
-                    response = jsonify({"success": True})
-
-                    # Set expiration time for cookies
-                    max_age = datetime.timedelta(days=1)  # Set to your desired duration
-                    set_access_cookies(response, access_token, max_age=max_age)
-                    set_refresh_cookies(response, refresh_token, max_age=max_age)
-
-                    # Update the user document with the refresh token
-                    users.update_one(
-                        {"email": email},
-                        {
-                            "$set": {
-                                "refresh_token": refresh_token,
-                                "refresh_token_status": "active",
-                            }
-                        },
-                    )
-                    return response, 200
-                else:
-                    return (
-                        jsonify({"success": False, "error": "Invalid credentials"}),
-                        401,
-                    )
-            else:
-                return "Invalid email", 401
+                },
+            )
+            return response, 200
         else:
-            return "", 404
+            return jsonify({"success": False, "error": "Invalid credentials"}), 401
     else:
-        return "", 404
+        return "Invalid email", 401
 
 
 @app.route("/logout", methods=["POST"])
 @jwt_required()
 def logout():
+
     current_user = get_jwt_identity()
     email = current_user
 
@@ -1552,7 +1042,7 @@ def creating_feeds_data_for_search_result(query):
         query_vector=query_vector,
         limit=50,
         with_payload=True,
-        score_threshold=0.8,
+        score_threshold=0.75,
     )
 
     feeds_results = []
@@ -1591,7 +1081,7 @@ def creating_social_media_data_for_search_result(query):
         query_vector=query_vector,
         limit=50,
         with_payload=True,
-        score_threshold=0.8,
+        score_threshold=0.75,
     )
 
     social_media_results = []
@@ -1636,7 +1126,7 @@ def creating_tenders_data_for_search_result(query):
         query_vector=query_vector,
         limit=50,
         with_payload=True,
-        score_threshold=0.8,
+        score_threshold=0.75,
     )
 
     tender_results = []
@@ -1675,7 +1165,7 @@ def creating_commanders_profile_data_for_search_result(query):
         query_vector=query_vector,
         limit=20,
         with_payload=True,
-        score_threshold=0.8,
+        score_threshold=0.75,
     )
 
     commanders_results = []
@@ -1739,7 +1229,7 @@ def search_query():
             search_keywords = sanitized_search_query["string_value"]
 
             # Convert the query to an embedding
-            query_vector = embeddings.embed_query(search_keywords)
+            query_vector = embeddings.embed_query(search_keywords.lower())
 
             user_email = session["email"]
             check_user_in_users_data = users_data.find_one({"email": user_email})
@@ -1765,12 +1255,6 @@ def search_query():
                 )
                 results.extend(tenders_search_results)
 
-                # searching keyword in commander profiles
-                commander_profile_search_results = (
-                    creating_commanders_profile_data_for_search_result(query_vector)
-                )
-                results.extend(commander_profile_search_results)
-
                 return jsonify(results)
         else:
             return jsonify({"error": "Invalid input"}), 400
@@ -1789,34 +1273,15 @@ def fetch_important_feeds_from_feeds_data():
         important_feeds_fixed_list, key=lambda x: parse_date(x["date"]), reverse=True
     )
 
-    # limited_sorted_important_feeds = all_important_feeds_sorted_data[:20]
+    limited_sorted_important_feeds = all_important_feeds_sorted_data[:20]
 
     final_list_of_feeds = []
-    for news in all_important_feeds_sorted_data:
+    for news in limited_sorted_important_feeds:
         news["from"] = "news"
         news["title"] = news["title"].strip()
         news["view_link"] = "/fdarticle/{}".format(news["article_number"])
         final_list_of_feeds.append(news)
     return final_list_of_feeds
-
-
-# fetching important feeds from feeds_data
-def fetch_important_tenders_from_tenders_data():
-    # fetching important tenders
-    all_important_tenders = list(
-        tenders_data.find({"type": "important"}, {"_id": 0}).sort("tender_date", -1)
-    )
-
-    final_list_of_all_tenders = []
-    for tender in all_important_tenders:
-        tender["title"] = tender["tender_title"].strip()
-        tender["date"] = tender["tender_date"].split(" ", 1)[0]
-        tender["from"] = "procurement"
-        tender_hash = tender["tender_hash"]
-        tender["view_link"] = "/tndrsnwtbvw/{}".format(tender_hash)
-        final_list_of_all_tenders.append(tender)
-
-    return final_list_of_all_tenders
 
 
 # # fetching important feeds from social_media_data
@@ -1837,114 +1302,25 @@ def fetch_important_tenders_from_tenders_data():
 #     return final_list_of_feeds
 
 
-def extracting_latest_date_for_important_highlight(list_value):
-    # extracting latest date only
-    all_dates = []
-    for data in list_value:
-        date = data["date"]
-        all_dates.append(date)
-
-    # Remove duplicates from date list by converting to a set
-    final_date_list = list(set(all_dates))
-
-    # sorting by date
-    final_list_of_sorted_date = sorted(
-        final_date_list, key=lambda x: parse_date(x), reverse=True
+# fetching important feeds from feeds_data
+def fetch_important_tenders_from_tenders_data():
+    # fetching important tenders
+    all_important_tenders = list(
+        tenders_data.find({"type": "important"}, {"_id": 0})
+        .sort("tender_date", -1)
+        .limit(10)
     )
 
-    latest_date_value = final_list_of_sorted_date[0]
-    return latest_date_value
+    final_list_of_all_tenders = []
+    for tender in all_important_tenders:
+        tender["title"] = tender["tender_title"].strip()
+        tender["date"] = tender["tender_date"].split(" ", 1)[0]
+        tender["from"] = "procurement"
+        tender_hash = tender["tender_hash"]
+        tender["view_link"] = "/tndrsnwtbvw/{}".format(tender_hash)
+        final_list_of_all_tenders.append(tender)
 
-
-@app.route("/hghdat", methods=["GET"])
-def show_highlight_data_on_new_tab():
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    page = request.args.get("page", default=1, type=int)
-    per_page = 15
-
-    # fetching important data only
-    important_feeds = fetch_important_feeds_from_feeds_data()
-    important_tenders = fetch_important_tenders_from_tenders_data()
-
-    # creating final list of highlight data by merging feeds & tenders
-    list_of_highlight_data = important_feeds + important_tenders
-
-    # extraction of latest date from important highlight
-    latest_date_from_important_highlight = (
-        extracting_latest_date_for_important_highlight(list_of_highlight_data)
-    )
-
-    # extracting important highlight of specific date
-    final_important_highlight = []
-    for data in list_of_highlight_data:
-        if data["date"] == latest_date_from_important_highlight:
-            final_important_highlight.append(data)
-
-    # creating required key & values for feeds & tenders data
-    final_list_of_important_highlights = []
-    for entry in final_important_highlight:
-        type_of_entry = entry["from"]
-
-        # creating image_link for feeds & tenders data
-        if type_of_entry == "procurement":
-            image_link = "/zhflgmg"
-        elif type_of_entry == "news":
-            image_link = gen_img_link(entry)
-
-        # content fixing for feeds & tenders data
-        if "content" in entry:
-            content_value = entry["content"]
-        else:
-            content_value = "NA"
-
-        entry["image_link"] = image_link
-        entry["content"] = content_value
-        final_list_of_important_highlights.append(entry)
-
-    # checking len of fetched feeds
-    total_feeds = len(final_list_of_important_highlights)
-
-    # creating feeds on per page bases
-    paginated_feeds = final_list_of_important_highlights[
-        (page - 1) * per_page : page * per_page
-    ]
-
-    if len(paginated_feeds) == 0:
-        last_valid_page = max(
-            1,
-            math.floor(total_feeds / per_page)
-            + (1 if total_feeds % per_page != 0 else 0),
-        )
-        if page > last_valid_page:
-            return redirect(
-                url_for("show_highlight_data_on_new_tab", page=last_valid_page),
-                code=302,
-            )
-
-    pagination_links = []
-    num_pages = 0
-    if total_feeds > per_page:
-        num_pages = math.ceil(total_feeds / per_page)
-        for p in range(1, num_pages + 1):
-            if p * per_page <= total_feeds:
-                pagination_links.append(
-                    {
-                        "page": p,
-                        "url": url_for("show_highlight_data_on_new_tab", page=p),
-                    }
-                )
-            else:
-                break  # stop generating links if there are no more feeds
-
-    return render_template(
-        "highlight_data.html",
-        feedlist=paginated_feeds,
-        pagination_links=pagination_links,
-        page=page,
-        num_pages=num_pages,
-    )
+    return final_list_of_all_tenders
 
 
 @app.route("/home", methods=["GET"])
@@ -1957,28 +1333,68 @@ def home():
     # fetching important data only
     important_feeds = fetch_important_feeds_from_feeds_data()
     important_tenders = fetch_important_tenders_from_tenders_data()
+    # important_social_media_feeds = fetch_important_feeds_from_social_media_data()
 
     # creating final list of highlight data by merging feeds & tenders
-    list_of_highlight_data = important_feeds + important_tenders
+    final_list_of_highlight_data = important_feeds + important_tenders
 
-    # extraction of latest date from important highlight
-    latest_date_from_important_highlight = (
-        extracting_latest_date_for_important_highlight(list_of_highlight_data)
+    # sorting by date
+    all_important_feeds_sorted_data = sorted(
+        final_list_of_highlight_data, key=lambda x: parse_date(x["date"]), reverse=True
     )
 
-    # extracting important highlight of specific date
-    final_important_highlight = []
-    for data in list_of_highlight_data:
-        if data["date"] == latest_date_from_important_highlight:
-            final_important_highlight.append(data)
+    all_tenders = list(
+        tenders_data.find({}, {"_id": 0}).sort("tender_date", -1).limit(10)
+    )
 
-    limited_important_highlight = final_important_highlight[:10]
-
+    final_list_of_all_tenders = []
+    for tender in all_tenders:
+        tender["tender_date"] = tender["tender_date"].split(" ", 1)[0]
+        tender_hash = tender["tender_hash"]
+        tender["tender_view_link"] = domain_name + "tndrs/{}".format(tender_hash)
+        tender["tender_download_link"] = "/tndrsdwn/{}".format(tender_hash)
+        final_list_of_all_tenders.append(tender)
     return render_template(
         "home.html",
-        feeds=limited_important_highlight,
-        latest_date=latest_date_from_important_highlight,
+        feeds=all_important_feeds_sorted_data,
+        tenders=final_list_of_all_tenders,
     )
+
+
+# @app.route("/home", methods=['GET'])
+# def home():
+#     if 'email' not in session:
+#         return redirect(url_for('authentication'))
+
+#     domain_name = request.url_root
+
+#     all_feeds = list(feeds_data.find({}, {'_id': 0}));
+#     fixed_list_of_feeds = fixing_feeds(all_feeds)
+
+#     sorted_data = sorted(
+#         fixed_list_of_feeds,
+#         key=lambda x: parse_date(x['date']),
+#         reverse=True
+#     )
+
+#     limited_sorted_data = sorted_data[:50]
+
+#     all_tenders = list(tenders_data.find({}, {'_id': 0}).sort("tender_date", -1).limit(10));
+
+#     final_list_for_feeds = []
+#     for feed in limited_sorted_data:
+#         feed['title'] = feed['title'].strip()
+#         feed['article_link'] = "/fdarticle/{}".format(feed['article_number'])
+#         final_list_for_feeds.append(feed)
+
+#     final_list_of_all_tenders = []
+#     for tender in all_tenders:
+#         tender['tender_date'] = tender['tender_date'].split(" ", 1)[0]
+#         tender_hash = tender['tender_hash']
+#         tender['tender_view_link'] = domain_name + "tndrs/{}".format(tender_hash)
+#         tender['tender_download_link'] = "/tndrsdwn/{}".format(tender_hash)
+#         final_list_of_all_tenders.append(tender)
+#     return render_template('home.html', feeds=final_list_for_feeds, tenders=final_list_of_all_tenders)
 
 
 @app.route("/recevehm", methods=["POST"])
@@ -2100,26 +1516,12 @@ def get_trending_keywords():
     if not date:
         return jsonify({"error": "Date parameter is required"}), 400
 
-    trending_doc = trending_keywords_pie_data.find_one({"date": date}, {"_id": 0})
+    trending_doc = trending_keywords_data.find_one({"date": date}, {"_id": 0})
 
     if trending_doc:
-        all_trending_keywords_documents = trending_doc.get("trending_keywords", [])
-
-        # seperating keywords list bases on mil & pol
-        list_of_military_trending_keywords = []
-        list_of_political_trending_keywords = []
-        for document in all_trending_keywords_documents:
-            if document["category"] == "military":
-                list_of_military_trending_keywords.append(document)
-            elif document["category"] == "political":
-                list_of_political_trending_keywords.append(document)
-
-        # creating final_dict of trending keyword
-        final_dict_of_trending_keywords = {}
-        final_dict_of_trending_keywords["mil"] = list_of_military_trending_keywords
-        final_dict_of_trending_keywords["pol"] = list_of_political_trending_keywords
-
-        return jsonify(final_dict_of_trending_keywords)
+        # We only want to return the trending keywords
+        trending_keywords = trending_doc.get("trending_keywords", [])
+        return jsonify(trending_keywords)
     else:
         return jsonify({"warning": "No data found for the specified date"}), 404
 
@@ -2416,7 +1818,6 @@ def all_mil_articles():
     per_page = 15  # adjust this value to set the number of feeds per page
 
     if ctr == "all":
-        # military_article_category = ["ground_force","air_force","rocket_force","navy","jlsf","armed_force"]
         military_article_category = [
             "ground_force",
             "air_force",
@@ -3895,78 +3296,6 @@ def tenders():
     )
 
 
-# @app.route("/tenders", methods=['GET'])
-# def tenders():
-#    if 'email' not in session:
-#        return redirect(url_for('authentication'))
-#
-#    all_tenders = list(tenders_data.find({}, {'_id': 0}).sort("tender_date", -1));
-#    final_list_of_all_tenders = []
-#    for tenders in all_tenders:
-#        tenders['tender_date'] = tenders['tender_date'].split(" ", 1)[0]
-#        tenders_hash = tenders['tender_hash']
-#        tenders['tender_view_link'] = "/tndrs/{}".format(tenders_hash)
-#        tenders['tender_download_link'] = "/tndrsdwn/{}".format(tenders_hash)
-#        final_list_of_all_tenders.append(tenders)
-#    return render_template('tenders.html', tndrs_data=final_list_of_all_tenders)
-
-
-# image dir of mucd
-mucd_image_dir = "mucd_images"
-
-
-@app.route("/mcdres/<image_name>")
-def serve_mucd_image(image_name):
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    # Validate the image name to prevent directory traversal
-    if not re.match(
-        r"^[\w\-. ]+$", image_name
-    ):  # Allow only alphanumeric, dash, underscore, dot, and space
-        return redirect(url_for("no_image_available"))
-
-    # Search for the image in all subdirectories
-    for root, dirs, files in os.walk(mucd_image_dir):
-        if image_name in files:
-            # If the image is found, return it using send_from_directory
-            return send_from_directory(root, image_name)
-    return redirect(url_for("no_image_available"))
-
-
-def creating_image_link_for_mucd(image_name_value):
-    image_name = image_name_value
-    image_path = os.path.join("mcdres", image_name_value)
-
-    # Search for the image in all subdirectories
-    for root, dirs, files in os.walk(mucd_image_dir):
-        if image_name in files:
-            domain_name = request.url_root
-            complete_image_link = "{}{}".format(domain_name, image_path)
-            return complete_image_link
-
-    # If the image is not found, return "NA"
-    return "NA"
-
-
-def validate_and_sanitize_numeric_data(input_data):
-    # Ensure input_data is a string
-    if isinstance(input_data, str):
-        # Strip whitespace and check if it consists only of digits
-        sanitized_input = input_data.strip()
-
-        if sanitized_input.isdigit():
-            # Check the length of the sanitized input
-            if 3 <= len(sanitized_input) <= 6:
-                return {"string_validated": "true", "string_value": sanitized_input}
-            else:
-                return {"string_validated": "false", "string_value": sanitized_input}
-        else:
-            return {"string_validated": "false", "string_value": input_data}
-    else:
-        return {"string_validated": "false", "string_value": input_data}
-
-
 @app.route("/mucd_track", methods=["GET"])
 def mucd_track():
     if "email" not in session:
@@ -4529,386 +3858,6 @@ def fetch_mucd_data():
         return redirect(url_for("authentication"))
 
 
-# @app.route('/mcdrcnt', methods=['POST'])
-# @jwt_required()
-# def fetch_recent_mucd_data():
-#     if 'email' not in session:
-#         return redirect(url_for('authentication'))
-
-
-#     # Access token is still active
-#     current_user = get_jwt_identity()
-#     user = users.find_one({"email": current_user}, {"_id": 0})
-
-#     if user:
-#         data = request.get_json()
-
-#         # Convert the query string to a dictionary
-#         if isinstance(data, str):
-#             arguments = parse_qs(data)
-
-#             # Convert lists to single values
-#             arguments = {k: v[0] for k, v in arguments.items()}
-#         else:
-#             arguments = {}
-
-#         arguments_validation = validate_and_sanitize_mucd_fetch_arguments(arguments)
-
-#         if arguments_validation['arguments_dict_validated'] == 'true':
-
-#             # Set default values for rg
-#             rcnt = arguments.get('rcnt', 'all')
-
-#             # Find all documents that contain the 'doc_uid' field
-#             all_mucds = list(mucd_data.find({"doc_uid": {"$exists": True}}, {"_id": 0}))
-
-#             if all_mucds:
-#                 # fixing date in mucd entries
-#                 fixed_date_of_mucd = []
-#                 for mucd_entry in all_mucds:
-#                     if "date" in mucd_entry:
-#                         mucd_entry['date'] = mucd_entry['date']
-#                     else:
-#                         mucd_entry['date'] = "NA"
-
-#                     if '",' in mucd_entry['date']:
-#                         mucd_entry['date'] = mucd_entry['date'].strip('",')
-#                     mucd_entry['date'] = mucd_entry['date'].split(" ")[0]
-
-#                     fixed_date_of_mucd.append(mucd_entry)
-
-#                 # sorting mucd entry bases on date
-#                 fixed_date_of_mucd.sort(key=get_date)
-#                 sorted_recent_mucds = fixed_date_of_mucd
-
-#                 final_list_of_mucd_item = []
-#                 for mucd_item in sorted_recent_mucds:
-#                     mucd_number = mucd_item['mucd_number']
-#                     mucd_location = mucd_item['location']
-
-#                     # Check if latitude and longitude are None or blank
-#                     mucd_latitude = mucd_item['latitude'] if mucd_item['latitude'] not in [None, ''] else 'NA'
-#                     mucd_longitude = mucd_item['longitude'] if mucd_item['longitude'] not in [None, ''] else 'NA'
-
-#                     if "\t" in mucd_latitude:
-#                         mucd_latitude = mucd_latitude.replace('\t', '')
-
-#                     if "\t" in mucd_longitude:
-#                         mucd_longitude = mucd_longitude.replace('\t', '')
-
-
-#                     # creating region field if it's not there using location
-#                     if 'region' not in mucd_item:
-#                         created_region = create_region_for_mucd(mucd_location)
-#                         mucd_item['region'] = created_region
-#                     else:
-#                         mucd_item['region'] = mucd_item['region']
-
-#                     final_dict = {"mucd":mucd_number, "location":mucd_location, "latitude":mucd_latitude, "longitude":mucd_longitude, "region":mucd_item['region']}
-#                     final_list_of_mucd_item.append(final_dict)
-#                 return jsonify(final_list_of_mucd_item)
-#             else:
-#                 return jsonify({"error": "something went wrong"})
-#         else:
-#             return jsonify({'error': 'Invalid input'}), 404
-#     else:
-#         return redirect(url_for('authentication'))
-
-
-def extracting_latest_date_for_mucd(list_value):
-    # extracting latest date only
-    all_dates = []
-    for data in list_value:
-        if "date" in data:
-            date = data["date"]
-            all_dates.append(date)
-
-    # Remove duplicates from date list by converting to a set
-    final_date_list = list(set(all_dates))
-
-    # sorting by date
-    final_list_of_sorted_date = sorted(
-        final_date_list, key=lambda x: parse_date(x), reverse=True
-    )
-
-    latest_date_value = final_list_of_sorted_date[0]
-    return latest_date_value
-
-
-@app.route("/mcdrcnt", methods=["POST"])
-@jwt_required()
-def fetch_recent_mucd_data():
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    # Access token is still active
-    current_user = get_jwt_identity()
-    user = users.find_one({"email": current_user}, {"_id": 0})
-
-    if user:
-        data = request.get_json()
-
-        # Convert the query string to a dictionary
-        if isinstance(data, str):
-            arguments = parse_qs(data)
-
-            # Convert lists to single values
-            arguments = {k: v[0] for k, v in arguments.items()}
-        else:
-            arguments = {}
-
-        arguments_validation = validate_and_sanitize_mucd_fetch_arguments(arguments)
-
-        if arguments_validation["arguments_dict_validated"] == "true":
-
-            # Set default values for rg
-            rcnt = arguments.get("rcnt", "all")
-
-            # Find all documents that contain the 'doc_uid' field
-            # all_mucds = list(mucd_data.find({"doc_uid": {"$exists": True}}, {"_id": 0}))
-            all_entries_of_mucd = list(mucd_data.find({}, {"_id": 0}))
-
-            # extraction of latest date from mucd data
-            latest_date_from_mucd_data = extracting_latest_date_for_mucd(
-                all_entries_of_mucd
-            )
-
-            all_mucds = list(
-                mucd_data.find({"date": latest_date_from_mucd_data}, {"_id": 0})
-            )
-
-            if all_mucds:
-                # fixing date in mucd entries
-                fixed_date_of_mucd = []
-                for mucd_entry in all_mucds:
-                    if "date" in mucd_entry:
-                        mucd_entry["date"] = mucd_entry["date"]
-                    else:
-                        mucd_entry["date"] = "NA"
-
-                    if '",' in mucd_entry["date"]:
-                        mucd_entry["date"] = mucd_entry["date"].strip('",')
-                    mucd_entry["date"] = mucd_entry["date"].split(" ")[0]
-
-                    fixed_date_of_mucd.append(mucd_entry)
-
-                # sorting mucd entry bases on date
-                fixed_date_of_mucd.sort(key=get_date)
-                sorted_recent_mucds = fixed_date_of_mucd
-
-                final_list_of_mucd_item = []
-                for mucd_item in sorted_recent_mucds:
-                    mucd_number = mucd_item["mucd_number"]
-                    mucd_location = mucd_item["location"]
-                    mucd_date = mucd_item["date"]
-
-                    # Check if latitude and longitude are None or blank
-                    mucd_latitude = (
-                        mucd_item["latitude"]
-                        if mucd_item["latitude"] not in [None, ""]
-                        else "NA"
-                    )
-                    mucd_longitude = (
-                        mucd_item["longitude"]
-                        if mucd_item["longitude"] not in [None, ""]
-                        else "NA"
-                    )
-
-                    if "\t" in mucd_latitude:
-                        mucd_latitude = mucd_latitude.replace("\t", "")
-
-                    if "\t" in mucd_longitude:
-                        mucd_longitude = mucd_longitude.replace("\t", "")
-
-                    # creating region field if it's not there using location
-                    if "region" not in mucd_item:
-                        created_region = create_region_for_mucd(mucd_location)
-                        mucd_item["region"] = created_region
-                    else:
-                        mucd_item["region"] = mucd_item["region"]
-
-                    final_dict = {
-                        "mucd": mucd_number,
-                        "location": mucd_location,
-                        "latitude": mucd_latitude,
-                        "longitude": mucd_longitude,
-                        "region": mucd_item["region"],
-                        "date": mucd_date,
-                    }
-                    final_list_of_mucd_item.append(final_dict)
-                return jsonify(final_list_of_mucd_item)
-            else:
-                return jsonify({"error": "something went wrong"})
-        else:
-            return jsonify({"error": "Invalid input"}), 404
-    else:
-        return redirect(url_for("authentication"))
-
-
-@app.route("/mcdunnmsug", methods=["GET"])
-@jwt_required()
-def unit_number_suggestions_for_mucd():
-    # Access token is still active
-    current_user = get_jwt_identity()
-    user = users.find_one({"email": current_user}, {"_id": 0})
-
-    if user:
-        query = request.args.get("query", "")
-        if query:
-            suggestions = mucd_data.find(
-                {"mucd_number": {"$regex": query, "$options": "i"}},
-                {"_id": 0, "mucd_number": 1},
-            )
-
-            # Convert cursor to list
-            suggestions_list = [suggestion["mucd_number"] for suggestion in suggestions]
-            convert_to_tuple = set(suggestions_list)
-            final_suggestions_list = list(convert_to_tuple)
-            return jsonify(final_suggestions_list)
-        return jsonify([])
-    else:
-        return "Invalid user", 404
-
-
-def creating_final_dict_of_mucd_history(data_dict):
-    final_dict = {}
-
-    final_dict["mucd_number"] = data_dict["mucd_number"]
-
-    # date management in entry
-    if "date" in data_dict:
-        if data_dict["date"] != "" or data_dict["date"] != "NA":
-            final_dict["date"] = data_dict["date"]
-        else:
-            final_dict["date"] = "Not available"
-    else:
-        final_dict["date"] = "Not available"
-
-    # location management in entry
-    if "location" in data_dict:
-        if data_dict["location"] != "" or data_dict["location"] != "NA":
-            final_dict["location"] = data_dict["location"]
-        else:
-            final_dict["location"] = "Not available"
-    else:
-        final_dict["location"] = "Not available"
-
-    # latitude management in entry
-    if "latitude" in data_dict:
-        if data_dict["latitude"] != "" or data_dict["latitude"] != "NA":
-            final_dict["latitude"] = data_dict["latitude"]
-        elif (
-            data_dict["latitude"] == ""
-            or data_dict["latitude"] == "NA"
-            or data_dict["latitude"] == "na"
-        ):
-            final_dict["latitude"] = "Not available"
-        else:
-            final_dict["latitude"] = "Not available"
-    else:
-        final_dict["latitude"] = "Not available"
-
-    # longitude management in entry
-    if "longitude" in data_dict:
-        if data_dict["longitude"] != "" or data_dict["longitude"] != "NA":
-            final_dict["longitude"] = data_dict["longitude"]
-        elif (
-            data_dict["longitude"] == ""
-            or data_dict["longitude"] == "NA"
-            or data_dict["longitude"] == "na"
-        ):
-            final_dict["longitude"] = "Not available"
-        else:
-            final_dict["longitude"] = "Not available"
-    else:
-        final_dict["longitude"] = "Not available"
-
-    # region management in entry
-    if "region" in data_dict:
-        if data_dict["region"] != "" or data_dict["region"] != "NA":
-            final_dict["region"] = data_dict["region"]
-        else:
-            final_dict["region"] = "Not available"
-    else:
-        final_dict["region"] = "Not available"
-
-    # doc_name management in entry
-    if "doc_name" in data_dict:
-        if data_dict["doc_name"] != "" or data_dict["doc_name"] != "NA":
-            final_dict["doc_name"] = data_dict["doc_name"]
-        else:
-            final_dict["doc_name"] = "Not available"
-    else:
-        final_dict["doc_name"] = "Not available"
-
-    # doc_uid management in entry
-    if "doc_uid" in data_dict:
-        if data_dict["doc_uid"] != "" or data_dict["doc_uid"] != "NA":
-            final_dict["doc_uid"] = data_dict["doc_uid"]
-        else:
-            final_dict["doc_uid"] = "Not available"
-    else:
-        final_dict["doc_uid"] = "Not available"
-
-    # tracking status management in entry
-    if "tracked_status" in data_dict:
-        final_dict["tracked_status"] = data_dict["tracked_status"]
-
-    return final_dict
-
-
-@app.route("/mcdldhis", methods=["POST"])
-@jwt_required()
-def mucd_number_old_history():
-    # Access token is still active
-    current_user = get_jwt_identity()
-    user = users.find_one({"email": current_user}, {"_id": 0})
-
-    if user:
-        data = request.get_json()
-
-        # Convert the query string to a dictionary
-        if isinstance(data, str):
-            arguments = parse_qs(data)
-
-            # Convert lists to single values
-            arguments = {k: v[0] for k, v in arguments.items()}
-        else:
-            arguments = {}
-
-        arguments_validation = validate_and_sanitize_mucd_fetch_arguments(arguments)
-
-        if arguments_validation["arguments_dict_validated"] == "true":
-            mucd_code = arguments.get("mcdnm", "")
-            latest_mucd_entry = list(
-                mucd_data.find({"mucd_number": str(mucd_code)}, {"_id": 0}).sort(
-                    "date", DESCENDING
-                )
-            )
-
-            if latest_mucd_entry:
-                final_list_of_all_history = []
-
-                # adding tracked status in mucd entry
-                for index, data in enumerate(latest_mucd_entry):
-                    if index == 0:
-                        data["tracked_status"] = "recent"
-                    else:
-                        data["tracked_status"] = "previous"
-
-                for mucd in latest_mucd_entry:
-                    fixed_final_dict = creating_final_dict_of_mucd_history(mucd)
-                    final_list_of_all_history.append(fixed_final_dict)
-                return jsonify(final_list_of_all_history)
-            else:
-                return jsonify([])
-        else:
-            return jsonify({"error": "mucd number is not valid"})
-        return jsonify({"error": "something went wrong"})
-    else:
-        return jsonify({"error": "invalid user"})
-
-
 @app.route("/profiler", methods=["GET"])
 def profiler():
     if "email" not in session:
@@ -5018,7 +3967,6 @@ def search_vehicle_name_or_weapon_name(query_value):
                             "weapon_uid": weapon["weapon_uid"],
                             "image_link": creating_image_link,
                             "research_links": variant.get("research_links", []),
-                            "related_articles": variant.get("related_articles", []),
                         }
                         filtered_weapons.append(filtered_variant)
 
@@ -5027,41 +3975,11 @@ def search_vehicle_name_or_weapon_name(query_value):
     return final_list
 
 
-# @app.route('/danm', methods=['POST'])
-# def check_da_number():
-#     if 'email' not in session:
-#         return redirect(url_for('authentication'))
-
-
-#     if request.method == 'POST':
-#         da_query = request.form['da_vlve']
-
-#         if is_license_plate(da_query):
-#             fixed_code = da_query.upper()
-#             vehicle_details = get_details_from_code(fixed_code)
-
-#             if vehicle_details != 'Invalid event or theatre_commond character.':
-#                 vehicle_details['found_in'] = 'vhc_lg'
-#                 vehicle_details['lic_nm'] = fixed_code
-#                 return jsonify(vehicle_details)
-#             else:
-#                 return jsonify({"error": "number not available"})
-#         elif is_weapon_name_or_vehicle_name(da_query):
-#             checking_data_in_vehicle_and_weapon = search_vehicle_name_or_weapon_name(da_query)
-
-#             if len(checking_data_in_vehicle_and_weapon) != 0:
-#                 return jsonify(checking_data_in_vehicle_and_weapon)
-#             else:
-#                 return jsonify({"error":"weapon or vehicle not found"})
-#         return jsonify({"error":"Not available"})
-
-
 @app.route("/wpnprfdn", methods=["GET"])
 def fetching_some_weapon_for_predefined_box():
     if "email" not in session:
         return redirect(url_for("authentication"))
 
-    #    all_weapons = list(weapons_data.find({}, {"_id": 0}).sort("_id", -1).limit(12))
     all_weapons = list(
         weapons_data.aggregate([{"$sample": {"size": 12}}, {"$project": {"_id": 0}}])
     )
@@ -5133,51 +4051,48 @@ def defence_assets_name_suggestions():
         return "Invalid user", 404
 
 
-# image dir of commander profile
-commander_image_dir = "commanders_images"
+# # image dir of commander profile
+# commander_image_dir = 'commanders_images'
+
+# @app.route('/cmdres/<image_name>')
+# def serve_commander_images(image_name):
+#     if 'email' not in session:
+#         return redirect(url_for('authentication'))
+
+#     # Validate the image name to prevent directory traversal
+#     if not re.match(r'^[\w\-. ]+$', image_name):  # Allow only alphanumeric, dash, underscore, dot, and space
+#         return redirect(url_for('no_image_available'))
+
+#     # Serve the image from the directory
+#     try:
+#         return send_from_directory(commander_image_dir, image_name)
+#     except FileNotFoundError:
+#         return redirect(url_for('no_image_available'))
 
 
-@app.route("/cmdres/<image_name>")
-def serve_commander_images(image_name):
-    if "email" not in session:
-        return redirect(url_for("authentication"))
+# # functions to create image link for commander profile
+# def creating_image_link_for_commander(dictionary):
+#     image_name_value = dictionary['image'];
+#     image_path = os.path.join('cmdres', image_name_value)
 
-    # Validate the image name to prevent directory traversal
-    if not re.match(
-        r"^[\w\-. ]+$", image_name
-    ):  # Allow only alphanumeric, dash, underscore, dot, and space
-        return redirect(url_for("no_image_available"))
+#     # Check if the image exists in the image directory
+#     check_data = os.path.exists(os.path.join(commander_image_dir, image_name_value))
 
-    # Serve the image from the directory
-    try:
-        return send_from_directory(commander_image_dir, image_name)
-    except FileNotFoundError:
-        return redirect(url_for("no_image_available"))
-
-
-# functions to create image link for commander profile
-def creating_image_link_for_commander(dictionary):
-    image_name_value = dictionary["image"]
-    image_path = os.path.join("cmdres", image_name_value)
-
-    # Check if the image exists in the image directory
-    check_data = os.path.exists(os.path.join(commander_image_dir, image_name_value))
-
-    if check_data:
-        domain_name = request.url_root
-        complete_image_link = "{}{}".format(domain_name, image_path)
-        return complete_image_link
-    else:
-        complete_image_link = "NA"
-        return complete_image_link
+#     if check_data:
+#         domain_name = request.url_root
+#         complete_image_link = "{}{}".format(domain_name, image_path)
+#         return complete_image_link
+#     else:
+#         complete_image_link = "NA"
+#         return complete_image_link
 
 
-@app.route("/cmd_pro", methods=["GET"])
-def commander_profile():
-    if "email" not in session:
-        return redirect(url_for("authentication"))
+# @app.route('/cmd_pro', methods=['GET'])
+# def commander_profile():
+#     if 'email' not in session:
+#         return redirect(url_for('authentication'))
 
-    return render_template("commander_profile.html")
+#     return render_template('commander_profile.html')
 
 
 # @app.route('/cmdprfdn', methods=['GET'])
@@ -5185,11 +4100,12 @@ def commander_profile():
 #     if 'email' not in session:
 #         return redirect(url_for('authentication'))
 
-
-#     all_commanders_profile = list(commanders_data.find({}, {"_id": 0}).sort("_id", -1).limit(9))
+#     all_commanders_profile = list(commanders_data.aggregate([
+#         {"$sample": {"size": 9}},
+#         {"$project": {"_id": 0}}
+#     ]))
 
 #     if all_commanders_profile:
-
 #         final_list = []
 #         for commander in all_commanders_profile:
 #             creating_image_link = creating_image_link_for_commander(commander)
@@ -5199,516 +4115,393 @@ def commander_profile():
 #     return jsonify({"error": "something went wrong"})
 
 
-@app.route("/cmdprfdn", methods=["GET"])
-def fetching_some_commanders_profile_for_predefined_box():
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    all_commanders_profile = list(
-        commanders_data.aggregate([{"$sample": {"size": 9}}, {"$project": {"_id": 0}}])
-    )
-
-    if all_commanders_profile:
-        final_list = []
-        for commander in all_commanders_profile:
-            creating_image_link = creating_image_link_for_commander(commander)
-            commander["image_link"] = creating_image_link
-            final_list.append(commander)
-        return jsonify(final_list)
-    return jsonify({"error": "something went wrong"})
-
-
-# Remove duplicates by (eng_name, native_name) key combination before selecting random samples
-def get_unique_profiles(profiles):
-    seen = set()
-    unique_profiles = []
-    for profile in profiles:
-        # Create a unique key based on relevant fields to identify duplicates
-        key = (
-            profile.get("eng_name").strip().lower(),
-            profile.get("native_name").strip().lower(),
-        )
-        if key not in seen:
-            seen.add(key)
-            unique_profiles.append(profile)
-    return unique_profiles
-
-
-def remove_non_alpha_characters(input_string: str) -> str:
-    # Use regular expression to replace non-alphabetic characters
-    cleaned_string = re.sub(r"[^a-zA-Z ]", "", input_string)
-    return cleaned_string
-
-
-def creating_feeds_data_for_commander_profile(query):
-    splitting_query_keywords = query.split("|")
-
-    final_list_of_keywords = []
-    for keyword in splitting_query_keywords:
-        fixed_string = remove_non_alpha_characters(keyword)
-        final_list_of_keywords.append(fixed_string.strip().lower())
-
-    final_query = " ".join(final_list_of_keywords)
-
-    results = []
-    query_vector = embeddings.embed_query(final_query)
-
-    # Assuming final_list_of_keywords is already defined and populated
-    commander_name = final_list_of_keywords[0]
-    commander_designation = final_list_of_keywords[1]
-
-    # Construct the filter for the search
-    filter_condition = {
-        "must": [{"key": "page_content", "match": {"value": commander_name}}]
-    }
-
-    # # Construct the filter for the search
-    # filter_condition = {
-    #     "must": [
-    #         {
-    #             "key": "page_content",
-    #             "match": {
-    #                 "value": commander_name
-    #             }
-    #         },
-    #         {
-    #             "key": "page_content",
-    #             "match": {
-    #                 "value": commander_designation
-    #             }
-    #         }
-    #     ]
-    # }
-
-    # searching keyword in feeds data
-    search_result = qdrant_client.search(
-        collection_name="qdrant_feeds_data",
-        query_vector=query_vector,
-        limit=50,
-        with_payload=True,
-        score_threshold=0.7,
-        query_filter=filter_condition,
-    )
-
-    feeds_results = []
-    unique_ids = set()  # Set to track unique article numbers
-    for result in search_result:
-        payload = result.payload
-        article_data = payload
-
-        # Check if the article number is already in the set
-        if article_data["article_number"] not in unique_ids:
-            unique_ids.add(article_data["article_number"])  # Add to the set
-            feeds_results.append(article_data)
-    fixed_list_of_feeds = fixing_feeds(feeds_results)
-
-    # Sort the list based on the 'date' key
-    sorted_data = sorted(
-        fixed_list_of_feeds, key=lambda x: parse_date(x["date"]), reverse=True
-    )
-
-    # adding new key in feeds
-    for feed in sorted_data:
-        feed["article_link"] = "/fdarticle/{}".format(feed["article_number"])
-        results.append(feed)
-
-    return results
-
-
-def check_news_regarding_commander_profile(commander_profile):
-    commander_data = commander_profile
-
-    # extracting required values for news searching
-    commander_name = commander_data["eng_name"]
-    latest_entry_of_career_details = commander_data["career_details"][0]
-    designation = latest_entry_of_career_details["role"]
-    department = latest_entry_of_career_details["department"]
-
-    # sending query to qdrant db for searching
-
-    # Convert the query to an embedding
-    query = f"{commander_name.strip()} | {designation.strip()} | {department.strip()}"
-
-    # searching query in feeds data
-    feeds_search_results = creating_feeds_data_for_commander_profile(query)
-
-    final_list_of_articles = []
-    for feed in feeds_search_results:
-        final_dict = {}
-        final_dict["title"] = feed["title"]
-        final_dict["date"] = feed["date"]
-        final_dict["article_number"] = feed["article_number"]
-        final_dict["article_link"] = feed["article_link"]
-        final_list_of_articles.append(final_dict)
-
-    # sorting the feeds in descending order
-    final_list_of_articles.sort(key=get_date)
-    sorted_feeds = final_list_of_articles
-
-    return sorted_feeds
-
-
-@app.route("/cmd_profth/<commander_profile_id>", methods=["GET"])
-def fetch_commander_profile_on_new_tab(commander_profile_id):
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    fixing_profile_ID = check_alphanumeric_with_hyphen(commander_profile_id)
-
-    if fixing_profile_ID["isvalid"] == "true":
-        fixed_profileID = fixing_profile_ID["commander_profile_id_value"]
-        checking_commander_profileID_in_db = commanders_data.find_one(
-            {"person_uid": fixed_profileID}, {"_id": 0}
-        )
-
-        # converting every dict key in lowercase of career details list
-        career_details_list = checking_commander_profileID_in_db["career_details"]
-
-        if isinstance(career_details_list, list):
-            career_details_lowercase_dict_list = []
-            for item in career_details_list:
-                converting_dict_key_in_lowercase = lowercase_keys(item)
-                career_details_lowercase_dict_list.append(
-                    converting_dict_key_in_lowercase
-                )
-
-        # Sort the career details in descending order based on the start year
-        sorted_career_details = sorted(
-            career_details_lowercase_dict_list, key=extract_years, reverse=True
-        )
-        checking_commander_profileID_in_db["career_details"] = sorted_career_details
-
-        # Extract departments with "current" or "present" in the years
-        current_departments = []
-        for i, item in enumerate(sorted_career_details):
-            # if 'current' in item['years'].lower() or 'present' in item['years'].lower():
-            if "years" in item and (
-                "current" in item["years"].lower() or "present" in item["years"].lower()
-            ):
-                # Check if the department is blank
-                department_value = (
-                    item["department"].strip() if item["department"].strip() else None
-                )
-
-                # If department is blank, take the value from the next dict if available
-                if not department_value and i + 1 < len(sorted_career_details):
-                    department_value = sorted_career_details[i + 1]["department"]
-
-                # Append the department value to the list
-                current_departments.append(department_value)
-
-        # Add the current departments list to the commander profile data
-        checking_commander_profileID_in_db["current_departments"] = current_departments
-
-        # adding image link key with value in dict
-        checking_commander_profileID_in_db["image_link"] = (
-            creating_image_link_for_commander(checking_commander_profileID_in_db)
-        )
-
-        # extracting commander name for new tab title
-        commander_name_in_english_for_title = checking_commander_profileID_in_db[
-            "eng_name"
-        ]
-
-        # creating final list with single dict
-        final_list_of_commander = [checking_commander_profileID_in_db]
-
-        # checking news which include this commander profile
-        commander_in_news = check_news_regarding_commander_profile(
-            final_list_of_commander[0]
-        )
-
-        # merging commander profile suggestions in a single list
-        merging_all_suggestion_in_a_single_list = []
-        for department_based_search in current_departments:
-            query = department_based_search
-            if query:
-                commander_profile_suggestions = list(
-                    commanders_data.find(
-                        {
-                            "$or": [
-                                {"occupation": {"$regex": query, "$options": "i"}},
-                                {
-                                    "career_details.department": {
-                                        "$regex": query,
-                                        "$options": "i",
-                                    }
-                                },
-                            ]
-                        },
-                        {
-                            "_id": 0,
-                        },
-                    )
-                )
-                merging_all_suggestion_in_a_single_list.extend(
-                    commander_profile_suggestions
-                )
-
-        # creating a commanders profile suggestion final list
-        final_list_of_commanders_profile_suggestions = []
-        for commander_entry in merging_all_suggestion_in_a_single_list:
-            final_dict_of_commander_profile_suggestion = {}
-            commander_name_in_english = commander_entry["eng_name"]
-            commander_name_in_chinese = commander_entry["native_name"]
-            commander_designation = commander_entry["occupation"]
-            commander_profile_id = commander_entry["person_uid"]
-            commander_image_link = creating_image_link_for_commander(commander_entry)
-
-            # updating new dict
-            final_dict_of_commander_profile_suggestion["eng_name"] = (
-                commander_name_in_english.strip()
-            )
-            final_dict_of_commander_profile_suggestion["native_name"] = (
-                commander_name_in_chinese.strip()
-            )
-            final_dict_of_commander_profile_suggestion["occupation"] = (
-                commander_designation.strip()
-            )
-            final_dict_of_commander_profile_suggestion["person_uid"] = (
-                commander_profile_id.strip()
-            )
-            final_dict_of_commander_profile_suggestion["image_link"] = (
-                commander_image_link.strip()
-            )
-            final_list_of_commanders_profile_suggestions.append(
-                final_dict_of_commander_profile_suggestion
-            )
-
-        # creating list of 3 commanders profile suggestion in random order
-        # removing duplicate entries from the list
-        unique_commanders = get_unique_profiles(
-            final_list_of_commanders_profile_suggestions
-        )
-
-        # Select 3 unique random profiles
-        num_to_select = 3
-        if len(unique_commanders) >= num_to_select:
-            random_commanders_profile = random.sample(unique_commanders, num_to_select)
-        else:
-            random_commanders_profile = unique_commanders  # Return all if less than 3
-
-        return render_template(
-            "commander_full_profile.html",
-            commander_full_profile_data=final_list_of_commander,
-            commander_name=commander_name_in_english_for_title,
-            profile_suggestions=random_commanders_profile,
-            commander_profile_news_details=commander_in_news,
-        )
-    else:
-        return "", 404
-
-
-@app.route("/cmd_check", methods=["POST"])
-@jwt_required()
-def commander_profile_check():
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    # Access token is still active
-    current_user = get_jwt_identity()
-    user = users.find_one({"email": current_user}, {"_id": 0})
-
-    if user:
-        cmd_name = request.form["cmd_name"]
-        fixing_commander_name = fix_commander_name(cmd_name)
-
-        if fixing_commander_name["isvalid"] == "true":
-            commander_name = fixing_commander_name["name_value"]
-
-            # Determine if the name is in English or native language
-            if re.match(r"^[A-Za-z\s]+$", commander_name):  # English name check
-                query_field = "eng_name"
-            else:  # Assume it's in native language
-                query_field = "native_name"
-
-            checking_commander_name_in_db = list(
-                commanders_data.find(
-                    {
-                        query_field: re.compile(
-                            f"^{re.escape(commander_name)}$", re.IGNORECASE
-                        )
-                    },
-                    {"_id": 0},
-                )
-            )
-            if checking_commander_name_in_db:
-
-                # creating a final list of commanders found
-                final_list = []
-                for commander in checking_commander_name_in_db:
-                    final_dict = {}
-                    final_dict["engnme"] = commander["eng_name"]
-                    final_dict["ntvnme"] = commander["native_name"]
-                    final_dict["occp"] = commander["occupation"]
-                    final_dict["cpid"] = commander["person_uid"]
-                    creating_image_link = creating_image_link_for_commander(commander)
-                    final_dict["image_link"] = creating_image_link
-                    final_list.append(final_dict)
-                return jsonify(final_list)
-            return jsonify({"error": "profile not found"}), 201
-        else:
-            return jsonify({"error": "Invalid input"}), 404
-    else:
-        return redirect(url_for("authentication")), 302
-
-
-# Function to extract the start year from the "Years" or "years" field of career details in the commander's profile
-def extract_years(career):
-    # Attempt to get the "Years" field, checking both cases
-    years = career.get("Years") or career.get("years", "")
-
-    # Split the years string by the '-' character
-    year_parts = years.split("-")
-
-    # Extract the start year, handling cases where the format may vary
-    if year_parts:
-        start_year_str = year_parts[
-            0
-        ].strip()  # Get the first part and strip whitespace
-
-        # Check if the start year is a valid year or contains "Present"
-        if start_year_str.isdigit():
-            return start_year_str  # Return as integer if it's a valid year
-
-        # Check if the start year contains alphanumeric characters using regex
-        elif re.search(r"\w", start_year_str):
-
-            # Extract numeric values from start_year_str
-            numeric_values = re.findall(r"\d+", start_year_str)
-
-            if numeric_values:
-                return numeric_values[0]  # Return the first numeric value found
-            else:
-                return ""  # Return empty string if no numeric values found
-        else:
-            return ""
-    return ""
-
-
-@app.route("/cmd_prof", methods=["POST"])
-@jwt_required()
-def commander_profile_single_check():
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    # Access token is still active
-    current_user = get_jwt_identity()
-    user = users.find_one({"email": current_user}, {"_id": 0})
-
-    if user:
-        data = request.get_json()
-        commander_profile_ID = data.get("cmd_sngl_nme")
-        fixing_profile_ID = check_alphanumeric_with_hyphen(commander_profile_ID)
-
-        if fixing_profile_ID["isvalid"] == "true":
-            fixed_profileID = fixing_profile_ID["commander_profile_id_value"]
-            checking_commander_profileID_in_db = commanders_data.find_one(
-                {"person_uid": fixed_profileID}, {"_id": 0}
-            )
-
-            # converting every dict key in lowercase of career details list
-            career_details_list = checking_commander_profileID_in_db["career_details"]
-
-            if isinstance(career_details_list, list):
-                career_details_lowercase_dict_list = []
-                for item in career_details_list:
-                    converting_dict_key_in_lowercase = lowercase_keys(item)
-                    career_details_lowercase_dict_list.append(
-                        converting_dict_key_in_lowercase
-                    )
-
-            # Sort the career details in descending order based on the start year
-            sorted_career_details = sorted(
-                career_details_lowercase_dict_list, key=extract_years, reverse=True
-            )
-            checking_commander_profileID_in_db["career_details"] = sorted_career_details
-
-            checking_commander_profileID_in_db["image_link"] = (
-                creating_image_link_for_commander(checking_commander_profileID_in_db)
-            )
-            final_result = checking_commander_profileID_in_db
-            return jsonify(final_result)
-        else:
-            return jsonify({"error": "profile not found"})
-    else:
-        return jsonify({"error": "something went wrong"})
-
-
-@app.route("/cmdprosg", methods=["GET"])
-@jwt_required()
-def commander_name_suggestions():
-
-    # Access token is still active
-    current_user = get_jwt_identity()
-    user = users.find_one({"email": current_user}, {"_id": 0})
-
-    if user:
-        query = request.args.get("query", "")
-        if query:
-            suggestions = list(
-                commanders_data.find(
-                    {
-                        "$or": [
-                            {"eng_name": {"$regex": query, "$options": "i"}},
-                            {"native_name": {"$regex": query, "$options": "i"}},
-                            {"occupation": {"$regex": query, "$options": "i"}},
-                            {
-                                "personal_details.birth_place": {
-                                    "$regex": query,
-                                    "$options": "i",
-                                }
-                            },
-                            {
-                                "career_details.location": {
-                                    "$regex": query,
-                                    "$options": "i",
-                                }
-                            },
-                            {
-                                "career_details.department": {
-                                    "$regex": query,
-                                    "$options": "i",
-                                }
-                            },
-                        ]
-                    },
-                    {
-                        "_id": 0,
-                    },
-                )
-            )
-
-            final_list_of_commanders = []
-            for commander_entry in suggestions:
-                final_dict_of_commander = {}
-                commander_name_in_english = commander_entry["eng_name"]
-                commander_name_in_chinese = commander_entry["native_name"]
-                commander_designation = commander_entry["occupation"]
-                commander_image_link = creating_image_link_for_commander(
-                    commander_entry
-                )
-
-                # updating new dict
-                final_dict_of_commander["eng_name"] = commander_name_in_english.strip()
-                final_dict_of_commander["native_name"] = (
-                    commander_name_in_chinese.strip()
-                )
-                final_dict_of_commander["occupation"] = commander_designation.strip()
-                final_dict_of_commander["image_link"] = commander_image_link.strip()
-                final_list_of_commanders.append(final_dict_of_commander)
-            return jsonify(final_list_of_commanders)
-        return jsonify([])
-    else:
-        return "Invalid user", 404
+# # Remove duplicates by (eng_name, native_name) key combination before selecting random samples
+# def get_unique_profiles(profiles):
+#     seen = set()
+#     unique_profiles = []
+#     for profile in profiles:
+#         # Create a unique key based on relevant fields to identify duplicates
+#         key = (profile.get('eng_name').strip().lower(), profile.get('native_name').strip().lower())
+#         if key not in seen:
+#             seen.add(key)
+#             unique_profiles.append(profile)
+#     return unique_profiles
+
+
+# def remove_non_alpha_characters(input_string: str) -> str:
+#     # Use regular expression to replace non-alphabetic characters
+#     cleaned_string = re.sub(r'[^a-zA-Z ]', '', input_string)
+#     return cleaned_string
+
+
+# def creating_feeds_data_for_commander_profile(query):
+#     splitting_query_keywords = query.split('|')
+
+#     final_list_of_keywords = []
+#     for keyword in splitting_query_keywords:
+#         fixed_string = remove_non_alpha_characters(keyword)
+#         final_list_of_keywords.append(fixed_string.strip().lower())
+
+#     final_query = " ".join(final_list_of_keywords)
+
+#     results = []
+#     query_vector = embeddings.embed_query(final_query)
+
+#     # Assuming final_list_of_keywords is already defined and populated
+#     commander_name = final_list_of_keywords[0]
+#     commander_designation = final_list_of_keywords[1]
+
+#     # Construct the filter for the search
+#     filter_condition = {
+#         "must": [
+#             {
+#                 "key": "page_content",
+#                 "match": {
+#                     "value": commander_name
+#                 }
+#             }
+#         ]
+#     }
+
+#     # searching keyword in feeds data
+#     search_result = qdrant_client.search(
+#         collection_name="qdrant_feeds_data",
+#         query_vector=query_vector,
+#         limit=50,
+#         with_payload=True,
+#         score_threshold=0.7,
+#         query_filter=filter_condition
+#     )
+
+#     feeds_results = []
+#     unique_ids = set()  # Set to track unique article numbers
+#     for result in search_result:
+#         payload = result.payload
+#         article_data = payload
+
+#         # Check if the article number is already in the set
+#         if article_data['article_number'] not in unique_ids:
+#             unique_ids.add(article_data['article_number'])  # Add to the set
+#             feeds_results.append(article_data)
+#     fixed_list_of_feeds = fixing_feeds(feeds_results)
+
+#     # Sort the list based on the 'date' key
+#     sorted_data = sorted(fixed_list_of_feeds, key=lambda x: parse_date(x['date']), reverse=True)
+
+#     # adding new key in feeds
+#     for feed in sorted_data:
+#         feed['article_link'] = "/fdarticle/{}".format(feed['article_number'])
+#         results.append(feed)
+
+#     return results
+
+
+# def check_news_regarding_commander_profile(commander_profile):
+#     commander_data = commander_profile
+
+#     # extracting required values for news searching
+#     commander_name = commander_data['eng_name']
+#     latest_entry_of_career_details = commander_data['career_details'][0]
+#     designation = latest_entry_of_career_details['role']
+#     department = latest_entry_of_career_details['department']
+
+#     # sending query to qdrant db for searching
+
+#     # Convert the query to an embedding
+#     query = f"{commander_name.strip()} | {designation.strip()} | {department.strip()}"
+
+#     # searching query in feeds data
+#     feeds_search_results = creating_feeds_data_for_commander_profile(query)
+
+#     final_list_of_articles = []
+#     for feed in feeds_search_results:
+#         final_dict = {}
+#         final_dict['title'] = feed['title']
+#         final_dict['date'] = feed['date']
+#         final_dict['article_number'] = feed['article_number']
+#         final_dict['article_link'] = feed['article_link']
+#         final_list_of_articles.append(final_dict)
+
+#     # sorting the feeds in descending order
+#     final_list_of_articles.sort(key=get_date)
+#     sorted_feeds = final_list_of_articles
+
+#     return sorted_feeds
+
+
+# @app.route('/cmd_profth/<commander_profile_id>', methods=['GET'])
+# def fetch_commander_profile_on_new_tab(commander_profile_id):
+#     if 'email' not in session:
+#         return redirect(url_for('authentication'))
+
+#     fixing_profile_ID = check_alphanumeric_with_hyphen(commander_profile_id)
+
+#     if fixing_profile_ID['isvalid'] == 'true':
+#         fixed_profileID = fixing_profile_ID['commander_profile_id_value']
+#         checking_commander_profileID_in_db = commanders_data.find_one({"person_uid":fixed_profileID},{"_id":0})
+
+#         # converting every dict key in lowercase of career details list
+#         career_details_list = checking_commander_profileID_in_db['career_details']
+
+#         if isinstance(career_details_list, list):
+#             career_details_lowercase_dict_list = []
+#             for item in career_details_list:
+#                 converting_dict_key_in_lowercase = lowercase_keys(item)
+#                 career_details_lowercase_dict_list.append(converting_dict_key_in_lowercase)
+
+#         # Sort the career details in descending order based on the start year
+#         sorted_career_details = sorted(career_details_lowercase_dict_list, key=extract_years, reverse=True)
+#         checking_commander_profileID_in_db['career_details'] = sorted_career_details
+
+#         # Extract departments with "current" or "present" in the years
+#         current_departments = []
+#         for i, item in enumerate(sorted_career_details):
+#             # if 'current' in item['years'].lower() or 'present' in item['years'].lower():
+#             if 'years' in item and ( 'current' in item['years'].lower() or 'present' in item['years'].lower()):
+#                 # Check if the department is blank
+#                 department_value = item['department'].strip() if item['department'].strip() else None
+
+#                 # If department is blank, take the value from the next dict if available
+#                 if not department_value and i + 1 < len(sorted_career_details):
+#                     department_value = sorted_career_details[i + 1]['department']
+
+#                 # Append the department value to the list
+#                 current_departments.append(department_value)
+
+#         # Add the current departments list to the commander profile data
+#         checking_commander_profileID_in_db['current_departments'] = current_departments
+
+#         # adding image link key with value in dict
+#         checking_commander_profileID_in_db['image_link'] = creating_image_link_for_commander(checking_commander_profileID_in_db)
+
+#         # extracting commander name for new tab title
+#         commander_name_in_english_for_title = checking_commander_profileID_in_db['eng_name']
+
+#         # creating final list with single dict
+#         final_list_of_commander = [checking_commander_profileID_in_db]
+
+#         # checking news which include this commander profile
+#         commander_in_news = check_news_regarding_commander_profile(final_list_of_commander[0])
+
+
+#         # merging commander profile suggestions in a single list
+#         merging_all_suggestion_in_a_single_list = []
+#         for department_based_search in current_departments:
+#             query = department_based_search
+#             if query:
+#                 commander_profile_suggestions = list(commanders_data.find(
+#                     {
+#                         "$or": [
+#                             {"occupation": {"$regex": query, "$options": "i"}},
+#                             {"career_details.department": {"$regex": query, "$options": "i"}}
+#                         ]
+#                     },
+#                     {"_id": 0,}
+#                 ))
+#                 merging_all_suggestion_in_a_single_list.extend(commander_profile_suggestions)
+
+#         # creating a commanders profile suggestion final list
+#         final_list_of_commanders_profile_suggestions = []
+#         for commander_entry in merging_all_suggestion_in_a_single_list:
+#             final_dict_of_commander_profile_suggestion = {}
+#             commander_name_in_english = commander_entry['eng_name']
+#             commander_name_in_chinese = commander_entry['native_name']
+#             commander_designation = commander_entry['occupation']
+#             commander_profile_id = commander_entry['person_uid']
+#             commander_image_link = creating_image_link_for_commander(commander_entry)
+
+#             # updating new dict
+#             final_dict_of_commander_profile_suggestion['eng_name'] = commander_name_in_english.strip()
+#             final_dict_of_commander_profile_suggestion['native_name'] = commander_name_in_chinese.strip()
+#             final_dict_of_commander_profile_suggestion['occupation'] = commander_designation.strip()
+#             final_dict_of_commander_profile_suggestion['person_uid'] = commander_profile_id.strip()
+#             final_dict_of_commander_profile_suggestion['image_link'] = commander_image_link.strip()
+#             final_list_of_commanders_profile_suggestions.append(final_dict_of_commander_profile_suggestion)
+
+
+#         # creating list of 3 commanders profile suggestion in random order
+#         # removing duplicate entries from the list
+#         unique_commanders = get_unique_profiles(final_list_of_commanders_profile_suggestions)
+
+#         # Select 3 unique random profiles
+#         num_to_select = 3
+#         if len(unique_commanders) >= num_to_select:
+#             random_commanders_profile = random.sample(unique_commanders, num_to_select)
+#         else:
+#             random_commanders_profile = unique_commanders  # Return all if less than 3
+
+#         return render_template('commander_full_profile.html', commander_full_profile_data=final_list_of_commander, commander_name=commander_name_in_english_for_title, profile_suggestions=random_commanders_profile, commander_profile_news_details=commander_in_news)
+#     else:
+#         return "", 404
+
+
+# @app.route('/cmd_check', methods=['POST'])
+# @jwt_required()
+# def commander_profile_check():
+#     if 'email' not in session:
+#         return redirect(url_for('authentication'))
+
+#     # Access token is still active
+#     current_user = get_jwt_identity()
+#     user = users.find_one({"email": current_user}, {"_id": 0})
+
+#     if user:
+#         cmd_name = request.form['cmd_name']
+#         fixing_commander_name = fix_commander_name(cmd_name)
+
+#         if fixing_commander_name['isvalid'] == 'true':
+#             commander_name = fixing_commander_name['name_value']
+
+#             # Determine if the name is in English or native language
+#             if re.match(r'^[A-Za-z\s]+$', commander_name):  # English name check
+#                 query_field = "eng_name"
+#             else:  # Assume it's in native language
+#                 query_field = "native_name"
+
+#             checking_commander_name_in_db = list(commanders_data.find({query_field: re.compile(f'^{re.escape(commander_name)}$', re.IGNORECASE)},{"_id": 0}))
+
+#             if checking_commander_name_in_db:
+
+#                 # creating a final list of commanders found
+#                 final_list = []
+#                 for commander in checking_commander_name_in_db:
+#                     final_dict = {}
+#                     final_dict['engnme'] = commander['eng_name']
+#                     final_dict['ntvnme'] = commander['native_name']
+#                     final_dict['occp'] = commander['occupation']
+#                     final_dict['cpid'] = commander['person_uid']
+#                     creating_image_link = creating_image_link_for_commander(commander)
+#                     final_dict['image_link'] = creating_image_link
+#                     final_list.append(final_dict)
+#                 return jsonify(final_list)
+#             return jsonify({"error": "profile not found"}), 201
+#         else:
+#             return jsonify({"error": "Invalid input"}), 404
+#     else:
+#         return redirect(url_for('authentication')), 302
+
+
+# # Function to extract the start year from the "Years" or "years" field of career details in the commander's profile
+# def extract_years(career):
+#     # Attempt to get the "Years" field, checking both cases
+#     years = career.get("Years") or career.get("years", "")
+
+#     # Split the years string by the '-' character
+#     year_parts = years.split('-')
+
+#     # Extract the start year, handling cases where the format may vary
+#     if year_parts:
+#         start_year_str = year_parts[0].strip()  # Get the first part and strip whitespace
+
+#         # Check if the start year is a valid year or contains "Present"
+#         if start_year_str.isdigit():
+#             return start_year_str  # Return as integer if it's a valid year
+
+#         # Check if the start year contains alphanumeric characters using regex
+#         elif re.search(r'\w', start_year_str):
+
+#             # Extract numeric values from start_year_str
+#             numeric_values = re.findall(r'\d+', start_year_str)
+
+#             if numeric_values:
+#                 return numeric_values[0]  # Return the first numeric value found
+#             else:
+#                 return ""  # Return empty string if no numeric values found
+#         else:
+#             return ""
+#     return ""
+
+
+# @app.route('/cmd_prof', methods=['POST'])
+# @jwt_required()
+# def commander_profile_single_check():
+#     if 'email' not in session:
+#         return redirect(url_for('authentication'))
+
+#     # Access token is still active
+#     current_user = get_jwt_identity()
+#     user = users.find_one({"email": current_user}, {"_id": 0})
+
+#     if user:
+#         data = request.get_json()
+#         commander_profile_ID = data.get('cmd_sngl_nme')
+#         fixing_profile_ID = check_alphanumeric_with_hyphen(commander_profile_ID)
+
+#         if fixing_profile_ID['isvalid'] == 'true':
+#             fixed_profileID = fixing_profile_ID['commander_profile_id_value']
+#             checking_commander_profileID_in_db = commanders_data.find_one({"person_uid":fixed_profileID},{"_id":0})
+
+#             # converting every dict key in lowercase of career details list
+#             career_details_list = checking_commander_profileID_in_db['career_details']
+
+#             if isinstance(career_details_list, list):
+#                 career_details_lowercase_dict_list = []
+#                 for item in career_details_list:
+#                     converting_dict_key_in_lowercase = lowercase_keys(item)
+#                     career_details_lowercase_dict_list.append(converting_dict_key_in_lowercase)
+
+#             # Sort the career details in descending order based on the start year
+#             sorted_career_details = sorted(career_details_lowercase_dict_list, key=extract_years, reverse=True)
+#             checking_commander_profileID_in_db['career_details'] = sorted_career_details
+
+#             checking_commander_profileID_in_db['image_link'] = creating_image_link_for_commander(checking_commander_profileID_in_db)
+#             final_result = checking_commander_profileID_in_db
+#             return jsonify(final_result)
+#         else:
+#             return jsonify({"error": "profile not found"})
+#     else:
+#         return jsonify({"error": "something went wrong"})
+
+
+# @app.route('/cmdprosg', methods=['GET'])
+# @jwt_required()
+# def commander_name_suggestions():
+
+#     # Access token is still active
+#     current_user = get_jwt_identity()
+#     user = users.find_one({"email": current_user}, {"_id": 0})
+
+#     if user:
+#         query = request.args.get('query', '')
+#         if query:
+#             suggestions = list(commanders_data.find(
+#                 {
+#                     "$or": [
+#                         {"eng_name": {"$regex": query, "$options": "i"}},
+#                         {"native_name": {"$regex": query, "$options": "i"}},
+#                         {"occupation": {"$regex": query, "$options": "i"}},
+#                         {"personal_details.birth_place": {"$regex": query, "$options": "i"}},
+#                         {"career_details.location": {"$regex": query, "$options": "i"}},
+#                         {"career_details.department": {"$regex": query, "$options": "i"}}
+#                     ]
+#                 },
+#                 {"_id": 0,}
+#             ))
+
+#             final_list_of_commanders = []
+#             for commander_entry in suggestions:
+#                 final_dict_of_commander = {}
+#                 commander_name_in_english = commander_entry['eng_name']
+#                 commander_name_in_chinese = commander_entry['native_name']
+#                 commander_designation = commander_entry['occupation']
+#                 commander_image_link = creating_image_link_for_commander(commander_entry)
+
+#                 # updating new dict
+#                 final_dict_of_commander['eng_name'] = commander_name_in_english.strip()
+#                 final_dict_of_commander['native_name'] = commander_name_in_chinese.strip()
+#                 final_dict_of_commander['occupation'] = commander_designation.strip()
+#                 final_dict_of_commander['image_link'] = commander_image_link.strip()
+#                 final_list_of_commanders.append(final_dict_of_commander)
+#             return jsonify(final_list_of_commanders)
+#         return jsonify([])
+#     else:
+#         return "Invalid user", 404
 
 
 @app.route("/gen_report", methods=["GET"])
 def gen_report():
     if "email" not in session:
         return redirect(url_for("authentication"))
-
-    email = session["email"]
 
     all_generated_reports = list(
         generate_report_data.find({}, {"_id": 0}).sort("report_date", -1)
@@ -5719,118 +4512,24 @@ def gen_report():
         report_link["report_link"] = "/gnrpt/{}".format(report_hash)
         report_link["report_download_link"] = "/gnrptdwn/{}".format(report_hash)
         final_list_of_all_reports.append(report_link)
-
     return render_template("generate_report.html", gn_rpt=final_list_of_all_reports)
 
 
-@app.route("/shwgnrpt", methods=["POST"])
-@jwt_required()
-def show_generated_report():
+@app.route("/spc_report", methods=["GET"])
+def special_report():
     if "email" not in session:
         return redirect(url_for("authentication"))
 
-    # Access token is still active
-    current_user = get_jwt_identity()
-    user = users.find_one({"email": current_user}, {"_id": 0})
-
-    if user:
-        email = user["email"]
-        all_user_generated_reports = list(
-            user_report_data.find({"user_email": email}, {"_id": 0}).sort(
-                "report_date", -1
-            )
-        )
-        final_list_of_all_user_reports = []
-        for user_report_link in all_user_generated_reports:
-            report_hash = user_report_link["report_hash"]
-            user_report_link["report_link"] = "/usrgnrpt/{}".format(report_hash)
-            user_report_link["report_download_link"] = "/usrgnrptdwn/{}".format(
-                report_hash
-            )
-            final_list_of_all_user_reports.append(user_report_link)
-        return jsonify(final_list_of_all_user_reports)
-    else:
-        return redirect(url_for("authentication"))
-
-
-@app.route("/create_report", methods=["POST"])
-def create_report():
-    if "email" not in session:
-        return redirect(url_for("authentication"))
-
-    # Retrieve form data
-    report_title = request.form.get("report_title")
-    report_keyword = request.form.get("report_keyword")
-    start_date = request.form.get("date_from")
-    end_date = request.form.get("date_to")
-    time_frame = [start_date, end_date]
-
-    # Basic validation
-    if not report_title or not report_keyword or not start_date or not end_date:
-        return jsonify({"error": "All fields are required!"})
-
-    content, sources = get_relevant_content(report_keyword, time_frame=time_frame)
-
-    if not content:
-        return jsonify({"warning": "No relevant data found for the keyword!"})
-    else:
-        structured_data = generate_report(
-            report_keyword, content, sources, time_frame, report_title
-        )
-
-        email = session["email"]
-
-        # Add metadata
-        report_hash = str(uuid.uuid4())
-        structured_data.update(
-            {
-                "report_hash": report_hash,
-                "report_date": structured_data["generated_on"].split(" ")[0],
-                "user_email": email,
-            }
-        )
-        save_report_pdf(structured_data, f"{report_hash}.pdf")
-
-        # Prepare user report data for user_data & user_report_data
-        final_dict = {
-            "report_title": report_title,
-            "report_date": structured_data["report_date"],
-            "report_hash": structured_data["report_hash"],
-        }
-
-        # Store full report data (only if hash doesn't exist)
-        existing_doc = user_report_data.find_one({"report_hash": report_hash})
-
-        if not existing_doc:
-            user_report_data.insert_one(structured_data)
-
-        # Update the user's document in MongoDB
-        user_document = users_data.find_one({"email": email})
-        if user_document:
-            # Check if 'user_reports' key exists, if not, create it
-            if "user_reports" not in user_document:
-                users_data.update_one({"email": email}, {"$set": {"user_reports": []}})
-            # Append the final_dict to the user_reports array
-            users_data.update_one(
-                {"email": email}, {"$push": {"user_reports": final_dict}}
-            )
-
-        return jsonify({"success": f"Report generated successfully!"})
-
-
-# @app.route("/spc_report", methods=['GET'])
-# def special_report():
-#     if 'email' not in session:
-#         return redirect(url_for('authentication'))
-
-#     all_special_reports = list(special_report_data.find({}, {'_id': 0}).sort("report_date", -1));
-#     final_list_of_all_reports = []
-#     for report_link in all_special_reports:
-#         report_hash = report_link['report_hash']
-#         report_link['report_link'] = "/spcrpt/{}".format(report_hash)
-#         report_link['report_download_link'] = "/spcrptdwn/{}".format(report_hash)
-#         final_list_of_all_reports.append(report_link)
-#     return render_template('special_report.html', spc_rpt=final_list_of_all_reports)
+    all_special_reports = list(
+        special_report_data.find({}, {"_id": 0}).sort("report_date", -1)
+    )
+    final_list_of_all_reports = []
+    for report_link in all_special_reports:
+        report_hash = report_link["report_hash"]
+        report_link["report_link"] = "/spcrpt/{}".format(report_hash)
+        report_link["report_download_link"] = "/spcrptdwn/{}".format(report_hash)
+        final_list_of_all_reports.append(report_link)
+    return render_template("special_report.html", spc_rpt=final_list_of_all_reports)
 
 
 # Set the directory where your reports are stored
@@ -5881,7 +4580,7 @@ def satellite_communication():
         report_link["report_link"] = "/satrpt/{}".format(report_hash)
         report_link["report_download_link"] = "/satrptdwn/{}".format(report_hash)
         final_list_of_all_reports.append(report_link)
-    return render_template("/satcom.html", satrpt=final_list_of_all_reports)
+    return render_template("satcom.html", satrpt=final_list_of_all_reports)
 
 
 @app.route("/satsdata", methods=["GET"])
@@ -6413,5 +5112,103 @@ def satellite_full_history_data(satellite_uid):
     )
 
 
+from flask import Flask, request, jsonify
+from pymongo import MongoClient
+from datetime import timedelta
+
+client = MongoClient("mongodb://localhost:27017/")
+db = client["ie_db"]
+
+
+def dates(start_date_str, end_date_str):
+    """Convert date strings to datetime objects, handle defaults."""
+    if not start_date_str:
+        start_date = datetime.datetime.now() - timedelta(days=30)
+    else:
+        start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
+
+    if not end_date_str:
+        end_date = datetime.datetime.now()
+    else:
+        end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d")
+
+    # Ensure end date is inclusive
+    end_date = end_date.replace(hour=23, minute=59, second=59)
+    return start_date, end_date
+
+
+def get_daterange(start_date_str, end_date_str):
+    """Return a human-readable label for the date range."""
+    start_date, end_date = dates(start_date_str, end_date_str)
+    num_days = (end_date - start_date).days  # FIX: correct order
+
+    if num_days <= 1:
+        label = "DAY"
+    elif num_days <= 7:
+        label = "WEEK"
+    elif 14 <= num_days <= 15:
+        label = "15 DAYS"
+    elif 28 <= num_days <= 31:
+        label = "MONTH"
+    elif 364 <= num_days:
+        label = "YEAR"
+    else:
+        label = f"{num_days} days"
+    return label
+
+
+@app.route("/ai_summary", methods=["GET", "POST"])
+def summary():
+    data = request.get_json(silent=True)
+    loc = data.get("loc")
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
+
+    match_stage = {}
+    if loc:
+        match_stage["region"] = loc
+
+    if start_date and end_date:
+        match_stage["daterange"] = get_daterange(start_date, end_date)
+
+    pipeline = []
+    if match_stage:
+        pipeline.append({"$match": match_stage})
+
+    pipeline.append({"$project": {"_id": 0, "region": 1, "summary_data": 1}})
+    result = list(db.ai_summary.aggregate(pipeline))
+    return jsonify(result)
+
+
+@app.route("/map_data", methods=["GET", "POST"])
+def map_data():
+    data = request.get_json(silent=True)
+    print(data)
+    start_date, end_date = dates(data.get("start_date"), data.get("end_date"))
+    pipeline = [
+        {"$match": {"date": {"$ne": None, "$ne": "", "$ne": "NA"}}},
+        {
+            "$addFields": {
+                "date_as_date": {
+                    "$dateFromString": {
+                        "dateString": "$date",
+                        "format": "%Y-%m-%d",
+                        "onError": None,
+                        "onNull": None,
+                    }
+                }
+            }
+        },
+        {"$match": {"date_as_date": {"$gte": start_date, "$lte": end_date}}},
+        {"$group": {"_id": "$region", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$project": {"_id": 1, "count": 1}},
+    ]
+
+    result = list(db.feeds_data.aggregate(pipeline))
+    data_dict = {doc["_id"]: doc["count"] for doc in result}
+    return jsonify(data_dict)
+
+
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True, port=9090)
