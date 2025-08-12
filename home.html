@@ -283,12 +283,12 @@
                         </table>
 
                         <div class="date-range-dropdown">
-                            <select id="dateRangeSelect" onchange="setDateRange(this.value)">
-                                <!-- <option value="">Select Range</option> -->
+                            <select onchange="setDateRange(this.value)">
+                                <option value="">Select Range</option>
                                 <option value="1">1 Day</option>
                                 <option value="7">Week</option>
                                 <option value="15">15 Days</option>
-                                <option value="30" selected>Month</option>
+                                <option value="30">Month</option>
                             </select>
                         </div>
                     </div>
@@ -419,13 +419,8 @@
     </div>
 </div>
 
-<script>
-    window.addEventListener('DOMContentLoaded', function () {
-        const select = document.getElementById('dateRangeSelect');
-        // console.log(select)
-        setDateRange(30);
-    });
-</script>
+
+
 
 <script src="https://cdn.jsdelivr.net/jquery/1/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
