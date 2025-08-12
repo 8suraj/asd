@@ -577,6 +577,7 @@
 .nav-bar .nav-links li svg path {
     fill: transparent;
     stroke: var(--dark-grey);
+    stroke-width: 1.3;
 }
 .nav-bar .nav-links li.active svg path,
 .nav-bar .nav-links li:hover svg path {
@@ -819,7 +820,7 @@
 }
 
 .global-searched-result .global-searched-result-tab-result-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .global-searched-result .global-searched-result-tab-result-container::-webkit-scrollbar-track {
@@ -1131,7 +1132,7 @@
 }
 
 .search-frm-adv-options-container .search-frm-adv-options-container-contents::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .search-frm-adv-options-container .search-frm-adv-options-container-contents::-webkit-scrollbar-track {
@@ -1534,21 +1535,14 @@
     height: 680px;
 }
 .map-svg {
-    height: 680px;
+    height: 600px;
     width: 100%;
 }
 
 .map-svg path {
     stroke: var(--dark-grey);
-    fill: var(--white);
     opacity: 1;
     cursor: pointer;
-}
-
-.map-svg path.hovered {
-    stroke: transparent;
-    fill: var(--blue-dark-bg);
-    opacity: 1;
 }
 
 .circle {
@@ -1664,7 +1658,7 @@
 }
 
 .recent_event_container .recent_event-table-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .recent_event_container .recent_event-table-container::-webkit-scrollbar-track {
@@ -1838,7 +1832,7 @@
     margin-bottom: 20px;
 }
 
-.feeds_container .Title-highlight .highlight-line {
+.feeds_container .Title-highlight {
     height: 1px;
     width: 99%;
     background: var(--dark-grey);
@@ -1861,7 +1855,7 @@
 }
 
 .feeds_container .feeds-table-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .feeds_container .feeds-table-container::-webkit-scrollbar-track {
@@ -2225,7 +2219,7 @@
 .overview-bottom-section-upper-container-left-section .Title-highlight {
     display: flex;
     align-items: center;
-    width: 200px;
+    width: 185px;
     margin-bottom: 20px;
 }
 
@@ -2347,7 +2341,7 @@
 }
 
 .overview-bottom-section-upper-container-right-section-region-container-menu::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .overview-bottom-section-upper-container-right-section-region-container-menu::-webkit-scrollbar-track {
@@ -2954,8 +2948,7 @@ th {
 }
 
 .overview-bottom-section .overview-bottom-section-bottom-container {
-    /*height: 650px;*/
-    height: auto;
+    height: 650px;
     /*  width: 100%;*/
     margin-top: 10px;
 }
@@ -2964,46 +2957,6 @@ th {
   height: 100%;
   width: 100%;
 }*/
-
-/* testing code of pie chart on home page code starts here */
-
-.chart-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    gap: 190px;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-.chart-wrapper {
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    width: 100%;
-    max-width: 500px;
-    min-width: 300px;
-}
-.chart-title {
-    text-align: center;
-    color: #2c3e50;
-    margin-bottom: 15px;
-    font-size: 18px;
-    font-weight: 500;
-}
-.chart {
-    width: 100%;
-    height: 400px;
-    position: relative;
-}
-@media (max-width: 768px) {
-    .chart-container {
-        flex-direction: column;
-        align-items: center;
-    }
-}
-
-/* testing code of pie chart on home page code ends here */
 
 /* tenders on home code ends here */
 
@@ -3070,7 +3023,7 @@ th {
 }
 
 .feeds-main-container .feeds-main-container-body::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .feeds-main-container .feeds-main-container-body::-webkit-scrollbar-track {
@@ -3105,7 +3058,7 @@ th {
     align-items: center;
     justify-content: center;
     position: relative;
-    padding: 10px 0px;
+    padding: 10px;
     margin-bottom: 10px;
     background: var(--blue-dark-bg);
     color: var(--white);
@@ -3115,15 +3068,12 @@ th {
     text-transform: uppercase;
     font-size: 22px;
     z-index: 1;
-    width: 100%;
     & span {
         font-weight: bold;
     }
     & a {
         text-decoration: none;
         color: inherit;
-        display: block;
-        width: 100%;
     }
 }
 
@@ -3176,7 +3126,7 @@ th {
 }
 
 .feeds-yesterday-news-container .feeds-yesterday-news-container-body::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 .feeds-yesterday-news-container .feeds-yesterday-news-container-body::-webkit-scrollbar-track {
@@ -3652,7 +3602,7 @@ th {
 }
 
 .all-news-main-container .all-news-main-container-body::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .all-news-main-container .all-news-main-container-body::-webkit-scrollbar-track {
@@ -3687,7 +3637,7 @@ th {
 }
 
 .feeds-all-rg-news-container .feeds-all-rg-selection-container::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 .feeds-all-rg-news-container .feeds-all-rg-selection-container::-webkit-scrollbar-track {
@@ -3749,7 +3699,7 @@ th {
 }
 
 .feeds-all-rg-news-container .feeds-all-rg-news-content-container::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 .feeds-all-rg-news-container .feeds-all-rg-news-content-container::-webkit-scrollbar-track {
@@ -3916,7 +3866,7 @@ th {
 }
 
 .mil-news-main-container .mil-news-main-container-body::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .mil-news-main-container .mil-news-main-container-body::-webkit-scrollbar-track {
@@ -3991,7 +3941,7 @@ th {
 }
 
 .feeds-mil-cat-news-container .feeds-mil-cat-news-content-container::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 .feeds-mil-cat-news-container .feeds-mil-cat-news-content-container::-webkit-scrollbar-track {
@@ -4143,7 +4093,7 @@ th {
 }
 
 .prp-news-main-container .prp-news-main-container-body::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .prp-news-main-container .prp-news-main-container-body::-webkit-scrollbar-track {
@@ -4218,7 +4168,7 @@ th {
 }
 
 .feeds-prp-cat-news-container .feeds-prp-cat-news-content-container::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 .feeds-prp-cat-news-container .feeds-prp-cat-news-content-container::-webkit-scrollbar-track {
@@ -4338,35 +4288,6 @@ th {
     flex-direction: column;
 }
 
-.imphgh-news-main-container-header-upper .imphgh-news-main-container-header-upper-right {
-    display: flex;
-}
-
-.imphgh-news-main-container-header-upper-right button {
-    border: none !important;
-    border-radius: 50%;
-    padding: 10px;
-    color: var(--blue-dark-bg);
-    background: var(--light-highlight-blue);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.3s ease;
-}
-
-.imphgh-news-main-container-header-upper-right button i {
-    font-size: 24px;
-    color: inherit;
-    transition: 0.3s ease;
-}
-
-.imphgh-news-main-container-header-upper-right button:hover {
-    background: var(--blue-dark-bg);
-    color: var(--white);
-    transition: 0.3s ease;
-}
-
 .imphgh-news-main-container-header-upper-left .imphgh-news-main-container-header-title {
     color: var(--blue-dark-bg);
     text-transform: capitalize;
@@ -4399,7 +4320,7 @@ th {
 }
 
 .imphgh-news-main-container .imphgh-news-main-container-body::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .imphgh-news-main-container .imphgh-news-main-container-body::-webkit-scrollbar-track {
@@ -4474,7 +4395,7 @@ th {
 }
 
 .feeds-imphgh-cat-news-container .feeds-imphgh-cat-news-content-container::-webkit-scrollbar {
-    width: 6px;
+    width: 4px;
 }
 
 .feeds-imphgh-cat-news-container .feeds-imphgh-cat-news-content-container::-webkit-scrollbar-track {
@@ -4577,7 +4498,7 @@ th {
 }
 
 .more-cont::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .more-cont::-webkit-scrollbar-track {
@@ -4866,12 +4787,6 @@ th {
     #printableArea,
     #printableArea * {
         visibility: visible;
-    }
-
-    .feeds-imphgh-cat-news-article-image {
-        height: 100px;
-        min-width: 200px;
-        max-width: 200px;
     }
 }
 
@@ -5500,6 +5415,7 @@ th {
     width: 24px;
     fill: var(--dark-grey);
     margin-left: 5px;
+    cursor: pointer;
     transition: 0.3s ease;
 }
 
@@ -5899,7 +5815,7 @@ th {
 }
 
 .tenders-container .tenders-container-table-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .tenders-container .tenders-container-table-container::-webkit-scrollbar-track {
@@ -6072,425 +5988,6 @@ th {
 
 /* tenders page code ends here */
 
-/* patent page code starts here */
-
-.patents-overview {
-    height: 100%;
-    width: 100%;
-    position: relative;
-}
-
-.patents-overview .patents-container {
-    background: var(--white);
-    border-radius: 12px;
-    padding: 20px;
-    height: 100%;
-}
-
-.patents-container .patents-container-header {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 15px;
-}
-
-.patents-container-header .patents-container-header-left {
-    display: flex;
-    flex-direction: column;
-}
-
-.patents-container-header-left .patents-container-header-left-title {
-    color: var(--blue-dark-bg);
-    text-transform: capitalize;
-}
-
-.patents-container-header-left .Title-highlight {
-    display: flex;
-    align-items: center;
-    width: 104px;
-}
-
-.patents-container-header-left .Title-highlight .highlight-line {
-    height: 1px;
-    width: 99%;
-    background: var(--dark-grey);
-}
-
-.patents-container-header-left .Title-highlight i {
-    font-size: 10px;
-    color: var(--dark-grey);
-}
-
-.patents-container-header .patents-container-header-right {
-    display: flex;
-    gap: 20px;
-}
-
-.patents-container-header-right .patents-container-header-right-filters-container {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 15px;
-    position: relative;
-}
-
-.patents-container-header-right-filters-container .patents-container-header-right-filter-searchbar {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px 10px;
-    border-radius: 6px;
-    background: var(--light-grey);
-    color: var(--black);
-}
-
-.patents-container-header-right-filter-searchbar i {
-    font-size: 18px;
-    margin-left: 10px;
-    color: var(--dark-grey);
-}
-
-.patents-container-header-right-filter-searchbar input {
-    outline: none;
-    border: none;
-    background: inherit;
-    color: inherit;
-    font-size: 16px;
-}
-
-.patents-container-header-right-filter-date-range-container
-    .patents-container-header-right-filter-custom-date-range-picker {
-    display: flex;
-    align-items: center;
-    padding: 13px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    background: var(--white);
-    color: var(--blue-dark-bg);
-    border: 1px solid var(--blue-dark-bg);
-    transition: 0.3 ease;
-}
-
-.patents-container-header-right-filter-custom-date-range-picker i {
-    font-size: 16px;
-    margin-left: 20px;
-}
-
-.patents-container-header-right-filter-custom-date-range-picker i:nth-child(1) {
-    font-size: 22px;
-    margin-left: 0px;
-    margin-right: 5px;
-}
-
-.patents-container-header-right-filters-container .patents-container-header-right-filter-search-button {
-    padding: 13px 20px;
-    background: var(--white);
-    border-radius: 6px;
-    border: 1px solid var(--blue-dark-bg);
-    font-size: 16px;
-    color: var(--blue-dark-bg);
-    cursor: pointer;
-    transition: 0.3s ease;
-}
-
-.patents-container-header-right-filter-search-button:hover {
-    background: var(--blue-dark-bg);
-    color: var(--white);
-    transition: 0.3s;
-}
-
-.patents-container-header-right-filters-container .patents-container-header-right-filter-clear-button {
-    padding: 13px 20px;
-    background: var(--white);
-    border-radius: 6px;
-    border: 1px solid var(--blue-dark-bg);
-    font-size: 16px;
-    color: var(--blue-dark-bg);
-    cursor: pointer;
-    transition: 0.3s ease;
-}
-
-.patents-container-header-right-filter-clear-button:hover {
-    background: var(--blue-dark-bg);
-    color: var(--white);
-    transition: 0.3s;
-}
-
-/* patent table code starts here */
-
-.patents-container .patents-container-table-container {
-    height: calc(100% - 65px);
-    overflow-y: auto;
-    transition: 0.3s ease;
-}
-
-.patents-container .patents-container-table-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
-}
-
-.patents-container .patents-container-table-container::-webkit-scrollbar-track {
-    background: #f1f1f1; /* Background of the scrollbar track */
-    border-radius: 10px;
-}
-
-.patents-container .patents-container-table-container::-webkit-scrollbar-thumb {
-    background: #888; /* Color of the scrollbar thumb */
-    border-radius: 10px;
-}
-
-.patents-container .patents-container-table-container::-webkit-scrollbar-thumb:hover {
-    background: #555; /* Color of the scrollbar thumb on hover */
-}
-
-.patents-container-table-container .loading-animation {
-    position: relative;
-    height: 100%;
-    align-items: center;
-    justify-content: center;
-    color: var(--dark-grey);
-    font-size: 24px;
-    z-index: 1000;
-}
-
-.patents-container-table-container .patent-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.patents-container-table-container .patent-table thead {
-    position: sticky;
-    top: 0;
-    background: var(--white);
-    color: var(--dark-grey);
-    border-bottom: 2px solid var(--table-thead-border-bottom);
-    z-index: 1;
-}
-
-.patents-container-table-container .patent-table th {
-    padding: 15px;
-    text-transform: capitalize;
-    text-align: center;
-    border-collapse: collapse;
-}
-
-.patents-container-table-container .patent-table tbody {
-    height: 100%;
-    overflow-y: auto;
-}
-
-.patents-container-table-container .patent-table td {
-    background: var(--white);
-    color: var(--light-black);
-    padding: 15px 20px;
-    text-transform: capitalize;
-    border-collapse: collapse;
-    text-align: center;
-}
-
-.patents-container-table-container .patent-table tbody tr td img {
-    height: 35px;
-    width: 35px;
-}
-
-.patents-container-table-container .patent-table tbody tr td a i {
-    font-size: 26px;
-    color: var(--light-black);
-}
-
-.patents-container-table-container .patent-table thead tr .patent-table-th-date {
-    text-align: center;
-    width: 140px;
-}
-
-.patents-container-table-container .patent-table thead tr .patent-table-th-download {
-    text-align: center;
-    width: 200px;
-}
-
-.patents-container-table-container .patent-table tbody tr .patent-table-td-title a {
-    text-decoration: none;
-    color: inherit;
-}
-
-.patents-container-table-container .patent-table tbody tr .patent-table-td-date {
-    text-align: center;
-}
-
-.patents-container-table-container .patent-table tbody tr .patent-table-td-download {
-    text-align: center;
-}
-
-.patents-container-table-container .patent-table tbody tr .patent-table-td-download a {
-    text-decoration: none;
-    padding: 7px 15px;
-    color: var(--dark-grey);
-    border-radius: 6px;
-    border: 1px solid var(--dark-grey);
-}
-
-/* patent table code ends here */
-
-/* patent full details page code starts here */
-
-.patent-more-detail-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
-    padding: 35px;
-    transform: scale(0);
-    transition: 0.3s ease;
-    z-index: 10;
-    background: var(--white);
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.patent-more-detail-container.active {
-    transform: scale(1);
-    transition: 0.3s ease;
-}
-
-.patent-more-detail-container i {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    font-size: 30px;
-    color: var(--light-black);
-    cursor: pointer;
-}
-
-.patent-more-detail-container .patent-more-detail-container-header {
-    display: flex;
-    justify-content: flex-start;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.patent-more-detail-container-header .patent-more-detail-container-header-title {
-    font-size: 22px;
-    font-weight: bold;
-    text-transform: capitalize;
-}
-
-.patent-more-detail-container-header .patent-more-detail-container-header-patent_number {
-    text-transform: capitalize;
-    font-size: 16px;
-    color: var(--dark-grey);
-}
-
-.patent-more-detail-container-header .patent-more-detail-container-header-date {
-    font-size: 16px;
-    color: var(--dark-grey);
-}
-
-.patent-more-detail-container .patent-more-detail-container-middle {
-    display: flex;
-    flex-direction: row;
-    gap: 50px;
-    margin-top: 10px;
-}
-
-.patent-more-detail-container-middle .patent-more-detail-container-middle-left {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.patent-more-detail-container-middle-left .patent-more-detail-container-middle-left-title {
-    font-size: 18px;
-    font-weight: bold;
-    text-transform: capitalize;
-}
-
-.patent-more-detail-container-middle-left .patent-more-detail-container-middle-left-imageBox {
-    height: auto;
-    width: 650px;
-    background: #f5f5f5;
-    border-radius: 10px;
-    border: 1px solid #e0e0e0;
-}
-
-.patent-more-detail-container-middle-left-imageBox img {
-    height: 100%;
-    width: 100%;
-    border-radius: 10px;
-    object-fit: contain;
-}
-
-.patent-more-detail-container-middle .patent-more-detail-container-middle-right {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    min-width: 230px;
-}
-
-.patent-more-detail-container-middle-right .patent-more-detail-container-middle-right-title {
-    font-size: 18px;
-    font-weight: bold;
-    text-transform: capitalize;
-}
-
-.patent-more-detail-container-middle-right .patent-more-detail-container-middle-right-contents {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.patent-more-detail-container-middle-right-contents .patent-fact-infoBOX {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 10px 15px;
-    background: #f5f5f5;
-    border-radius: 10px;
-    border: 1px solid #e0e0e0;
-}
-
-.patent-fact-infoBOX .patent-fact-infoBOX-title {
-    font-size: 14px;
-    color: var(--dark-grey);
-}
-
-.patent-fact-infoBOX .patent-fact-infoBOX-details {
-    font-size: 16px;
-    color: var(--black);
-}
-
-.patent-more-detail-container .patent-more-detail-container-contents {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.patent-more-detail-container-contents .patent-more-detail-container-content-infoBOX {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    padding: 15px;
-    background: #f5f5f5;
-    border-radius: 10px;
-    border: 1px solid #e0e0e0;
-}
-
-.patent-more-detail-container-content-infoBOX .patent-more-detail-header {
-    font-size: 20px;
-    font-weight: bold;
-    text-transform: uppercase;
-    color: var(--blue-dark-bg);
-}
-
-.patent-more-detail-container-content-infoBOX .patent-more-detail-content {
-    font-size: 16px;
-}
-
-/* patent full details page code starts here */
-/* patent page code ends here */
-
 /* mucd tracking page code starts here */
 
 .mucd-main-container {
@@ -6504,7 +6001,7 @@ th {
 }
 
 .mucd-main-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .mucd-main-container::-webkit-scrollbar-track {
@@ -6767,8 +6264,7 @@ th {
 /* temp code for filter starts here */
 
 .mucd-map-header .mucd-map-header-filter-section {
-    /*background: var(--white);*/
-    background: rgba(255, 255, 255, 0.5);
+    background: var(--white);
     color: var(--dark-grey);
     height: 45px;
     width: 45px;
@@ -6780,15 +6276,11 @@ th {
     margin-left: 5px;
     margin-right: 10px;
     position: relative;
-    cursor: pointer;
-}
-
-.mucd-map-header-filter-section:hover {
-    background: rgba(255, 255, 255, 1);
 }
 
 .mucd-map-header-filter-section i {
     font-size: 20px;
+    cursor: pointer;
 }
 
 .mucd-map-header-filter-section .mucd-map-header-filter-section-menu {
@@ -6910,7 +6402,7 @@ th {
 }
 
 .mucd-map-header-filter-section-region-option::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .mucd-map-header-filter-section-region-option::-webkit-scrollbar-track {
@@ -7016,7 +6508,7 @@ th {
 }
 
 .mucd-map-header-searchbar .mucd-map-header-searchbar-suggestionsBOX::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .mucd-map-header-searchbar .mucd-map-header-searchbar-suggestionsBOX::-webkit-scrollbar-track {
@@ -7310,7 +6802,7 @@ th {
 }
 
 .mucd-map-left-section-result-container .mucd-map-left-section-result-container-scroll-container::-webkit-scrollbar {
-    width: 5px; /* Width of the scrollbar */
+    width: 3px; /* Width of the scrollbar */
 }
 
 .mucd-map-left-section-result-container
@@ -7579,7 +7071,7 @@ th {
 }
 
 .mucd-fullscreen-history-container .mucd-fullscreen-history-container-body::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .mucd-fullscreen-history-container .mucd-fullscreen-history-container-body::-webkit-scrollbar-track {
@@ -8020,7 +7512,7 @@ th {
 
 .profiler-main-container-body-upper-left-section-searchbar
     .profiler-main-container-body-upper-left-section-searchbar-suggestionsBOX::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .profiler-main-container-body-upper-left-section-searchbar
@@ -8125,7 +7617,7 @@ th {
 }
 
 .profiler-main-container-body .profiler-main-container-body-bottom::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .profiler-main-container-body .profiler-main-container-body-bottom::-webkit-scrollbar-track {
@@ -8578,41 +8070,6 @@ th {
 
 .weapon-container-bottom-researchlinkBox-container a {
     padding: 10px 0px;
-    width: max-content;
-}
-
-.profiler-main-container-body-bottom-weapon-container-bottom
-    .profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles {
-    display: none;
-    flex-direction: column;
-    gap: 5px;
-    transition: 0.3s ease;
-}
-
-.profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles.active {
-    display: flex;
-    transition: 0.3s ease;
-}
-
-.profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles
-    .weapon-container-bottom-relatedArticles-heading {
-    display: flex;
-}
-
-.weapon-container-bottom-relatedArticles-heading .weapon-container-bottom-relatedArticles-heading-title {
-    color: var(--blue-dark-bg);
-    text-transform: capitalize;
-}
-
-.profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles
-    .weapon-container-bottom-relatedArticlesBox-container {
-    display: flex;
-    flex-direction: column;
-}
-
-.weapon-container-bottom-relatedArticlesBox-container a {
-    padding: 10px 0px;
-    width: max-content;
 }
 
 .profiler-main-container-body-bottom-container-predefined-box {
@@ -9140,7 +8597,7 @@ td {
 }
 
 .cp-section-text-search-container-upper-left-section .cp-section-text-search-suggestionsBOX::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .cp-section-text-search-container-upper-left-section .cp-section-text-search-suggestionsBOX::-webkit-scrollbar-track {
@@ -9270,7 +8727,7 @@ td {
 }
 
 .cp-section-text-search-container .cp-section-text-search-container-bottom::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .cp-section-text-search-container .cp-section-text-search-container-bottom::-webkit-scrollbar-track {
@@ -9530,7 +8987,7 @@ td {
 
 .cp-section-text-search-container-result-container
     .cp-section-text-search-container-bottom-middle-section::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
     visibility: hidden;
     transition: visibility 0.3s ease;
 }
@@ -9678,7 +9135,7 @@ td {
 
 .cp-section-text-search-container-result-container
     .cp-section-text-search-container-bottom-right-section::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
     visibility: hidden;
     transition: visibility 0.3s ease;
 }
@@ -11044,23 +10501,6 @@ td {
     transition: 0.3s ease;
 }
 
-.genrpt-toggle.view_active:hover {
-    border-bottom: 3px solid var(--dark-grey);
-    transition: 0.3s ease;
-}
-
-.genrpt-toggle.your_active {
-    color: var(--black);
-    background: transparent;
-    border-bottom: 3px solid var(--black);
-    transition: 0.3s ease;
-}
-
-.genrpt-toggle.your_active:hover {
-    border-bottom: 3px solid var(--dark-grey);
-    transition: 0.3s ease;
-}
-
 .genrpt-toggle i {
     font-size: 26px;
     color: var(--white);
@@ -11134,7 +10574,7 @@ td {
 }
 
 .genrpt-creation-frm .genrpt-creation-frm-adv-options-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .genrpt-creation-frm .genrpt-creation-frm-adv-options-container::-webkit-scrollbar-track {
@@ -11278,31 +10718,6 @@ td {
     gap: 20px;
     width: calc(100% - 324px);
     justify-content: space-between;
-}
-
-.genrpt-creation-frm-adv-options-container-contents .genrpt-creation-frm-loading-screen {
-    width: 100%;
-    padding: 20px;
-    margin-top: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-}
-
-.genrpt-creation-frm-loading-screen .spinner {
-    border: 4px solid rgba(0, 0, 0, 0.1);
-    border-left-color: #000;
-    border-radius: 50%;
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 /* RESET FORM ELEMENTS */
@@ -11556,7 +10971,7 @@ td {
 }
 
 .genrpt-creation-container .genrpt-defmain-container-contents-details-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .genrpt-creation-container .genrpt-defmain-container-contents-details-container::-webkit-scrollbar-track {
@@ -11701,6 +11116,7 @@ td {
 .genrpt-main-container-contents {
     display: none;
     flex-direction: column;
+    /*  height: calc(100% - 115px);*/
     height: calc(100% - 50px);
     padding: 0px;
     background: transparent;
@@ -11832,7 +11248,7 @@ td {
 }
 
 .genrpt-main-container-contents .genrpt-main-container-contents-details-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .genrpt-main-container-contents .genrpt-main-container-contents-details-container::-webkit-scrollbar-track {
@@ -12009,345 +11425,6 @@ td {
     transition: 0.3s ease;
 }
 
-/* your report section in generate report page code starts here */
-
-.yourpt-main-container-contents {
-    display: none;
-    flex-direction: column;
-    height: calc(100% - 50px);
-    padding: 0px;
-    background: transparent;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
-    overflow: hidden;
-    transition: 0.3s ease;
-}
-
-.yourpt-main-container-contents.your_active {
-    display: flex;
-    transition: 0.3s ease;
-}
-
-.yourpt-main-container-contents .yourpt-main-container-contents-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.yourpt-main-container-contents-header .yourpt-main-container-contents-header-left-section {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-}
-
-.yourpt-main-container-contents-header-left-section h2 {
-    text-transform: capitalize;
-    color: var(--dark-grey);
-    font-size: 20px;
-    margin: 0px;
-}
-
-.yourpt-main-container-contents-header-left-section .yourpt-main-container-contents-header-left-section-count-text {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.yourpt-main-container-contents-header-left-section-count-text p {
-    font-size: 18px;
-    color: var(--light-black);
-    margin: 0px;
-}
-
-.yourpt-main-container-contents-header .yourpt-main-container-contents-header-right-section {
-    display: flex;
-    gap: 20px;
-    align-items: center;
-    color: var(--light-black);
-    position: relative;
-}
-
-.yourpt-main-container-contents-header-right-section i {
-    cursor: pointer;
-    font-size: 22px;
-}
-
-.yourpt-main-container-contents-header-right-section .yourpt-main-container-contents-header-right-section-text {
-    font-size: 18px;
-    margin: 0px;
-    text-transform: capitalize;
-}
-
-.yourpt-main-container-contents-header-right-section
-    .yourpt-main-container-contents-header-right-section-filters-container {
-    display: flex;
-    gap: 15px;
-}
-
-.yourpt-main-container-contents-header-right-section-filters-container
-    .yourpt-main-container-contents-header-right-section-filter-date-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.yourpt-main-container-contents-header-right-section-filter-date-container .yourpt-viewer-custom-date-range-picker {
-    display: flex;
-    align-items: center;
-    font-size: 20px;
-    padding: 12px;
-    width: max-content;
-    border-radius: 6px;
-    outline: none;
-    background: var(--white);
-    color: var(--blue-dark-bg);
-    cursor: pointer;
-    border: 1px solid var(--blue-dark-bg);
-    transition: 0.3 ease;
-}
-
-.yourpt-viewer-custom-date-range-picker i {
-    font-size: 16px;
-    margin-left: 10px;
-}
-
-.yourpt-viewer-custom-date-range-picker i:nth-child(1) {
-    font-size: 22px;
-    margin-left: 0px;
-    margin-right: 5px;
-}
-
-.yourpt-main-container-contents-header-right-section-filter-date-container .yourpt-viewer-date-range-clear-filter-btn {
-    padding: 12px;
-    font-size: 18px;
-    text-transform: capitalize;
-    background: var(--red-light-bg);
-    color: var(--red-dark-bg);
-    border: 1px solid var(--red-dark-bg);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-.yourpt-viewer-date-range-clear-filter-btn:hover {
-    background: var(--red-dark-bg);
-    color: var(--white);
-    transition: 0.3s;
-}
-
-.yourpt-main-container-contents .yourpt-main-container-contents-details-container {
-    display: flex;
-    gap: 20px;
-    margin-top: 10px;
-    flex-wrap: wrap;
-    overflow-y: auto;
-    padding: 0px 10px;
-}
-
-.yourpt-main-container-contents .yourpt-main-container-contents-details-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
-}
-
-.yourpt-main-container-contents .yourpt-main-container-contents-details-container::-webkit-scrollbar-track {
-    background: #f1f1f1; /* Background of the scrollbar track */
-    border-radius: 10px;
-}
-
-.yourpt-main-container-contents .yourpt-main-container-contents-details-container::-webkit-scrollbar-thumb {
-    background: #888; /* Color of the scrollbar thumb */
-    border-radius: 10px;
-}
-
-.yourpt-main-container-contents .yourpt-main-container-contents-details-container::-webkit-scrollbar-thumb:hover {
-    background: #555; /* Color of the scrollbar thumb on hover */
-}
-
-.yourpt-main-container-contents-details-container .your_report_erro_info {
-    padding: 20px;
-    color: var(--dark-grey);
-    width: 100%;
-    margin-top: 50px;
-}
-
-.your_report_erro_info-text {
-    text-align: center;
-    font-size: 20px;
-    color: inherit;
-}
-
-.yourpt-main-container-contents-details-container .report-cardbox-info {
-    width: 100%;
-    padding: 20px;
-}
-
-.report-cardbox-info .report-cardbox-info-text {
-    text-align: center;
-    font-size: 20px;
-    color: var(--dark-grey);
-}
-
-.yourpt-main-container-contents-details-container .report-cardbox {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-width: 420px;
-    padding: 20px;
-    box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
-    background: var(--blue-lightest-bg);
-    color: var(--dark-grey);
-    border: 1px solid var(--blue-light-bg);
-    border-radius: 10px;
-    overflow: hidden;
-    position: relative;
-}
-
-.report-cardbox .report-cardbox-header {
-    display: flex;
-    justify-content: space-between;
-}
-
-.report-cardbox-header img {
-    height: 50px;
-    width: 50px;
-}
-
-.report-cardbox-header #report-cardbox-more-options-toggleBTN {
-    cursor: pointer;
-    font-size: 22px;
-    height: fit-content;
-}
-
-.report-cardbox .report-cardbox-content {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    margin-top: 30px;
-    height: 130px;
-}
-
-.report-cardbox-content .report-cardbox-content-title {
-    color: var(--light-black);
-    text-transform: capitalize;
-    height: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-}
-
-.report-cardbox-content .report-cardbox-content-date {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--light-black);
-}
-
-.report-cardbox .report-cardbox-options {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    background: var(--white);
-    padding: 15px;
-    color: var(--dark-grey);
-    box-shadow: 0px 0px 45px 4px var(--boxShadowColor);
-    border-radius: 10px;
-    transform: scale(0);
-    z-index: 10;
-    transition: 0.3s ease;
-}
-
-.report-cardbox-options.active {
-    transform: scale(1);
-    transition: 0.3s ease;
-}
-
-.report-cardbox-options .report-cardbox-option {
-    text-decoration: none;
-    color: inherit;
-    opacity: 0.7;
-    font-size: 18px;
-    text-transform: capitalize;
-    transition: 0.3s ease;
-}
-
-.report-cardbox-option:hover {
-    opacity: 1;
-    color: var(--black);
-    transition: 0.3s ease;
-}
-
-.report-cardbox .report-cardbox-bottom {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 40px;
-    border-radius: 6px;
-    padding: 15px 20px;
-    text-decoration: none;
-    background: var(--light-highlight-blue);
-    color: var(--blue-dark-bg);
-    transition: 0.3s ease;
-}
-
-.report-cardbox-bottom:hover {
-    background: var(--blue-dark-bg);
-    color: var(--white);
-    transition: 0.3s ease;
-}
-
-.report-cardbox-bottom p {
-    margin: 0px;
-    padding: 0px;
-    font-size: 18px;
-}
-
-.report-cardbox-bottom i {
-    line-height: 20px;
-    font-size: 22px;
-}
-
-.gnrpt-view-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
-    padding: 20px;
-    transform: scale(0);
-    transition: 0.3s ease;
-}
-
-.gnrpt-view-container.active {
-    transform: scale(1);
-    transition: 0.3s ease;
-}
-
-.gnrpt-view-container i {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 28px;
-    color: var(--light-black);
-    cursor: pointer;
-}
-
-.gnrpt-view-container #report_viewer {
-    height: 100%;
-    width: 100%;
-    padding: 10px;
-    background: var(--white);
-    border-radius: 6px;
-    position: relative;
-    transition: 0.3s ease;
-}
-
-/* your report section in generate report page code ends here */
-
 /* generate report page code ends here */
 
 /* special report page code starts here */
@@ -12468,7 +11545,7 @@ td {
 }
 
 .spcrpt-main-container-contents .spcrpt-main-container-contents-details-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .spcrpt-main-container-contents .spcrpt-main-container-contents-details-container::-webkit-scrollbar-track {
@@ -12990,7 +12067,7 @@ td {
 }
 
 .satellrpt-main-container-contents .satellrpt-main-container-contents-details-container::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .satellrpt-main-container-contents .satellrpt-main-container-contents-details-container::-webkit-scrollbar-track {
@@ -13286,7 +12363,7 @@ td {
 }
 
 .satsdata-map-container-header-left .satsdata-map-header-searchbar-suggestionsBOX::-webkit-scrollbar {
-    width: 8px; /* Width of the scrollbar */
+    width: 6px; /* Width of the scrollbar */
 }
 
 .satsdata-map-container-header-left .satsdata-map-header-searchbar-suggestionsBOX::-webkit-scrollbar-track {
@@ -13676,7 +12753,7 @@ td {
 }
 
 .satshis-main-container::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
     visibility: hidden;
     transition: visibility 0.3s ease;
 }
@@ -14790,27 +13867,6 @@ td {
     .feeds_container.active {
         display: block;
     }
-    .feeds_container .feeds_container_header {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-    .feeds_container_header .feeds_container_title_middle {
-        --tw-bg-opacity: 1;
-        background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
-        width: 1px;
-        height: 25px;
-        margin-left: 20px;
-        margin-right: 15px;
-    }
-    .feeds_container_header .feeds_container_recdate {
-        color: var(--blue-dark-bg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 14px;
-    }
     .feeds_container .Title-highlight {
         display: flex;
         align-items: center;
@@ -15047,7 +14103,7 @@ td {
     .overview-bottom-section-upper-container-left-section .Title-highlight {
         display: flex;
         align-items: center;
-        width: 129px;
+        width: 125px;
         margin-bottom: 20px;
     }
     .overview-bottom-section-upper-container-right-section
@@ -15198,64 +14254,10 @@ td {
         transition: 0.3s ease;
     }
     .overview-bottom-section .overview-bottom-section-bottom-container {
-        height: auto;
+        height: 420px;
         /*    width: 100%;*/
         margin-top: 10px;
     }
-
-    /* testing code of pie chart on home page code starts here */
-
-    .overview-bottom-section-upper-container-right-section .date-filter-container .date-filter-container-input {
-        padding: 8px 10px;
-        margin: 10px 0;
-        font-size: 14px;
-        color: var(--blue-dark-bg);
-        border: 1px solid var(--blue-dark-bg);
-        border-radius: 6px;
-        text-transform: uppercase;
-    }
-
-    .overview-bottom-section-upper-container-right-section .date-filter-container .date-filter-container-search-button {
-        padding: 8px 16px;
-        font-size: 14px;
-        cursor: pointer;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-    }
-
-    .chart-container {
-        display: flex;
-        flex-wrap: nowrap;
-        justify-content: space-evenly;
-        gap: 50px;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    .chart-wrapper {
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        width: 100%;
-        max-width: 400px;
-        min-width: 200px;
-    }
-    .chart-title {
-        text-align: center;
-        color: #2c3e50;
-        margin-bottom: 15px;
-        font-size: 14px;
-        font-weight: 500;
-    }
-    .chart {
-        width: 100%;
-        height: 300px;
-        position: relative;
-    }
-
-    /* testing code of pie chart on home page code ends here */
 
     /* feeds page responsive code starts here */
     .feeds-main-container {
@@ -16497,6 +15499,7 @@ td {
         width: 18px;
         fill: var(--dark-grey);
         margin-left: 5px;
+        cursor: pointer;
         transition: 0.3s ease;
     }
     .social-media-highlights .social-media-highlights-comments-container {
@@ -16922,6 +15925,7 @@ td {
     }
     .mucd-map-header-filter-section i {
         font-size: 12px;
+        cursor: pointer;
     }
     .mucd-map-header-filter-section .mucd-map-header-filter-section-menu {
         background: var(--white);
@@ -17021,7 +16025,7 @@ td {
         transition: 0.3s ease;
     }
     .mucd-map-header-filter-section-region-option::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
     }
     .mucd-map-header-filter-section-region-option::-webkit-scrollbar-track {
         background: #f1f1f1;
@@ -17071,7 +16075,7 @@ td {
         border-radius: 10px;
     }
     .mucd-map-header-searchbar .mucd-map-header-searchbar-suggestionsBOX::-webkit-scrollbar {
-        width: 8px; /* Width of the scrollbar */
+        width: 6px; /* Width of the scrollbar */
     }
 
     .mucd-map-header-searchbar .mucd-map-header-searchbar-suggestionsBOX::-webkit-scrollbar-track {
@@ -17273,7 +16277,7 @@ td {
 
     .mucd-map-left-section-result-container
         .mucd-map-left-section-result-container-scroll-container::-webkit-scrollbar {
-        width: 5px; /* Width of the scrollbar */
+        width: 3px; /* Width of the scrollbar */
     }
 
     .mucd-map-left-section-result-container
@@ -17796,7 +16800,7 @@ td {
 
     .profiler-main-container-body-upper-left-section-searchbar
         .profiler-main-container-body-upper-left-section-searchbar-suggestionsBOX::-webkit-scrollbar {
-        width: 8px; /* Width of the scrollbar */
+        width: 6px; /* Width of the scrollbar */
     }
 
     .profiler-main-container-body-upper-left-section-searchbar
@@ -17986,17 +16990,6 @@ td {
     }
     .profiler-main-container-body-bottom-weapon-container-bottom-researchlinks
         .weapon-container-bottom-researchlinkBox-container {
-        display: flex;
-        flex-direction: column;
-        font-size: 11px;
-    }
-    .profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles
-        .weapon-container-bottom-relatedArticles-heading {
-        display: flex;
-        font-size: 11px;
-    }
-    .profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles
-        .weapon-container-bottom-relatedArticlesBox-container {
         display: flex;
         flex-direction: column;
         font-size: 11px;
@@ -19322,79 +18315,6 @@ td {
         position: relative;
         transition: 0.3s ease;
     }
-
-    .yourpt-main-container-contents-header-left-section h2 {
-        text-transform: capitalize;
-        color: var(--dark-grey);
-        font-size: 12px;
-        margin: 0px;
-    }
-    .yourpt-main-container-contents-header-left-section-count-text p {
-        font-size: 11px;
-        color: var(--light-black);
-        margin: 0px;
-    }
-    .yourpt-main-container-contents-header-right-section-filter-date-container .yourpt-viewer-custom-date-range-picker {
-        display: flex;
-        align-items: center;
-        font-size: 11px;
-        padding: 10px;
-        width: max-content;
-        border-radius: 6px;
-        outline: none;
-        background: var(--white);
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        border: 1px solid var(--blue-dark-bg);
-        transition: 0.3s ease;
-    }
-    .yourpt-viewer-custom-date-range-picker i:nth-child(1) {
-        font-size: 14px;
-        margin-left: 0px;
-        margin-right: 5px;
-    }
-    .yourpt-viewer-custom-date-range-picker i {
-        font-size: 10px;
-        margin-left: 10px;
-    }
-    .yourpt-main-container-contents-header-right-section-filter-date-container
-        .yourpt-viewer-date-range-clear-filter-btn {
-        padding: 10px;
-        font-size: 11px;
-        text-transform: capitalize;
-        background: var(--red-light-bg);
-        color: var(--red-dark-bg);
-        border: 1px solid var(--red-dark-bg);
-        border-radius: 6px;
-        cursor: pointer;
-        transition: 0.3s;
-    }
-    .yourpt-main-container-contents-details-container .report-cardbox {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-width: 205px;
-        padding: 15px;
-        font-size: 11px;
-        box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
-        background: var(--blue-lightest-bg);
-        color: var(--dark-grey);
-        border: 1px solid var(--blue-light-bg);
-        border-radius: 10px;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .your_report_erro_info-text {
-        text-align: center;
-        font-size: 14px;
-        color: inherit;
-    }
-    .report-cardbox-info .report-cardbox-info-text {
-        text-align: center;
-        font-size: 14px;
-        color: var(--dark-grey);
-    }
     /* generate report page responsive code ends here */
 
     /* special report page responsive code starts here */
@@ -20192,216 +19112,6 @@ td {
     }
 
     /* sat full timeline page code ends here */
-
-    /* patent page code starts here */
-
-    .patents-container-header .patents-container-header-left {
-        display: flex;
-        flex-direction: column;
-        font-size: 10px;
-    }
-    .patents-container-header-left .Title-highlight {
-        display: flex;
-        align-items: center;
-        width: 70px;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-searchbar {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        padding: 10px;
-        border-radius: 6px;
-        background: var(--light-grey);
-        color: var(--black);
-    }
-    .patents-container-header-right-filter-searchbar i {
-        font-size: 12px;
-        margin-left: 10px;
-        color: var(--dark-grey);
-    }
-    .patents-container-header-right-filter-searchbar input {
-        outline: none;
-        border: none;
-        background: inherit;
-        color: inherit;
-        font-size: 12px;
-        width: 250px;
-    }
-    .patents-container-header-right-filter-date-range-container
-        .patents-container-header-right-filter-custom-date-range-picker {
-        display: flex;
-        align-items: center;
-        padding: 10px;
-        border-radius: 6px;
-        font-size: 11px;
-        cursor: pointer;
-        background: var(--white);
-        color: var(--blue-dark-bg);
-        border: 1px solid var(--blue-dark-bg);
-        transition: 0.3s ease;
-    }
-    .patents-container-header-right-filter-custom-date-range-picker i:nth-child(1) {
-        font-size: 14px;
-        margin-left: 0px;
-        margin-right: 5px;
-    }
-    .patents-container-header-right-filter-custom-date-range-picker i {
-        font-size: 11px;
-        margin-left: 12px;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-search-button {
-        padding: 10px;
-        background: var(--white);
-        border-radius: 6px;
-        border: 1px solid var(--blue-dark-bg);
-        font-size: 11px;
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        transition: 0.3s ease;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-clear-button {
-        padding: 10px;
-        background: var(--white);
-        border-radius: 6px;
-        border: 1px solid var(--blue-dark-bg);
-        font-size: 11px;
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        transition: 0.3s ease;
-    }
-    .patents-container .patents-container-table-container {
-        height: calc(100% - 55px);
-        overflow-y: auto;
-        transition: 0.3s ease;
-    }
-    .patents-container-table-container .patent-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 12px;
-    }
-    .patents-container-table-container .patent-table th {
-        padding: 10px;
-        font-size: 12px;
-        text-transform: capitalize;
-        text-align: center;
-        border-collapse: collapse;
-    }
-    .patents-container-table-container .patent-table thead tr .patent-table-th-download {
-        text-align: center;
-        width: 135px;
-        max-width: 135px;
-    }
-    .patents-container-table-container .patent-table td {
-        background: var(--white);
-        color: var(--light-black);
-        padding: 10px;
-        font-size: 11px;
-        text-transform: capitalize;
-        border-collapse: collapse;
-    }
-    .patents-container-table-container .patent-table tbody tr .patent-table-td-download a {
-        text-decoration: none;
-        padding: 6px 12px;
-        color: var(--dark-grey);
-        border-radius: 6px;
-        border: 1px solid var(--dark-grey);
-        font-size: 11px;
-    }
-    .patent-more-detail-container {
-        position: absolute;
-        top: 0;
-        left: 0;
-        height: 100%;
-        width: 100%;
-        padding: 20px;
-        transform: scale(0);
-        transition: 0.3s ease;
-        z-index: 10;
-        background: var(--white);
-        border-radius: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
-    .patent-more-detail-container i {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        font-size: 18px;
-        color: var(--light-black);
-        cursor: pointer;
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-title {
-        font-size: 17px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-patent_number {
-        text-transform: capitalize;
-        font-size: 12px;
-        color: var(--dark-grey);
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-date {
-        font-size: 12px;
-        color: var(--dark-grey);
-    }
-    .patent-more-detail-container .patent-more-detail-container-middle {
-        display: flex;
-        flex-direction: row;
-        gap: 25px;
-        margin-top: 0px;
-    }
-    .patent-more-detail-container-middle-left .patent-more-detail-container-middle-left-title {
-        font-size: 15px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-middle-left .patent-more-detail-container-middle-left-imageBox {
-        height: auto;
-        width: 400px;
-        background: #f5f5f5;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-    }
-    .patent-more-detail-container-middle .patent-more-detail-container-middle-right {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        min-width: 230px;
-    }
-    .patent-more-detail-container-middle-right .patent-more-detail-container-middle-right-title {
-        font-size: 15px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-middle-right-contents .patent-fact-infoBOX {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        padding: 10px;
-        background: #f5f5f5;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-    }
-    .patent-fact-infoBOX .patent-fact-infoBOX-title {
-        font-size: 12px;
-        color: var(--dark-grey);
-    }
-    .patent-fact-infoBOX .patent-fact-infoBOX-details {
-        font-size: 14px;
-        color: var(--black);
-    }
-    .patent-more-detail-container-content-infoBOX .patent-more-detail-header {
-        font-size: 15px;
-        font-weight: bold;
-        text-transform: uppercase;
-        color: var(--blue-dark-bg);
-    }
-    .patent-more-detail-container-content-infoBOX .patent-more-detail-content {
-        font-size: 12px;
-    }
-
-    /* patent page code ends here */
 
     /* date range picker responsive code starts here */
     .ranges {
@@ -21213,27 +19923,6 @@ td {
     .feeds_container.active {
         display: block;
     }
-    .feeds_container .feeds_container_header {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-    .feeds_container_header .feeds_container_title_middle {
-        --tw-bg-opacity: 1;
-        background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
-        width: 1px;
-        height: 30px;
-        margin-left: 20px;
-        margin-right: 15px;
-    }
-    .feeds_container_header .feeds_container_recdate {
-        color: var(--blue-dark-bg);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 16px;
-    }
     .feeds_container .Title-highlight {
         display: flex;
         align-items: center;
@@ -21442,7 +20131,7 @@ td {
     .overview-bottom-section-upper-container-left-section .Title-highlight {
         display: flex;
         align-items: center;
-        width: 163px;
+        width: 153px;
         margin-bottom: 20px;
     }
     .overview-bottom-section-upper-container-right-section
@@ -21584,64 +20273,10 @@ td {
         transition: 0.3s ease;
     }
     .overview-bottom-section .overview-bottom-section-bottom-container {
-        height: auto;
+        height: 540px;
         /*    width: 100%;*/
         margin-top: 10px;
     }
-
-    /* testing code of pie chart on home page code starts here */
-
-    .overview-bottom-section-upper-container-right-section .date-filter-container .date-filter-container-input {
-        padding: 8px 10px;
-        margin: 10px 0;
-        font-size: 16px;
-        color: var(--blue-dark-bg);
-        border: 1px solid var(--blue-dark-bg);
-        border-radius: 6px;
-        text-transform: uppercase;
-    }
-
-    .overview-bottom-section-upper-container-right-section .date-filter-container .date-filter-container-search-button {
-        padding: 8px 16px;
-        font-size: 16px;
-        cursor: pointer;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-    }
-
-    .chart-container {
-        display: flex;
-        flex-wrap: nowrap;
-        justify-content: space-evenly;
-        gap: 0px;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    .chart-wrapper {
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        width: 100%;
-        max-width: 450px;
-        min-width: 300px;
-    }
-    .chart-title {
-        text-align: center;
-        color: #2c3e50;
-        margin-bottom: 15px;
-        font-size: 16px;
-        font-weight: 500;
-    }
-    .chart {
-        width: 100%;
-        height: 350px;
-        position: relative;
-    }
-
-    /* testing code of pie chart on home page code ends here */
 
     /* feeds page responsive code starts here */
 
@@ -22882,6 +21517,7 @@ td {
         width: 18px;
         fill: var(--dark-grey);
         margin-left: 5px;
+        cursor: pointer;
         transition: 0.3s ease;
     }
     .social-media-highlights .social-media-highlights-comments-container {
@@ -23280,6 +21916,7 @@ td {
     }
     .mucd-map-header-filter-section i {
         font-size: 12px;
+        cursor: pointer;
     }
     .mucd-map-header-filter-section .mucd-map-header-filter-section-menu {
         background: var(--white);
@@ -23388,7 +22025,7 @@ td {
         transition: 0.3s ease;
     }
     .mucd-map-header-filter-section-region-option::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
     }
     .mucd-map-header-filter-section-region-option::-webkit-scrollbar-track {
         background: #f1f1f1;
@@ -23435,7 +22072,7 @@ td {
         border-radius: 10px;
     }
     .mucd-map-header-searchbar .mucd-map-header-searchbar-suggestionsBOX::-webkit-scrollbar {
-        width: 8px; /* Width of the scrollbar */
+        width: 6px; /* Width of the scrollbar */
     }
 
     .mucd-map-header-searchbar .mucd-map-header-searchbar-suggestionsBOX::-webkit-scrollbar-track {
@@ -23632,7 +22269,7 @@ td {
 
     .mucd-map-left-section-result-container
         .mucd-map-left-section-result-container-scroll-container::-webkit-scrollbar {
-        width: 5px; /* Width of the scrollbar */
+        width: 3px; /* Width of the scrollbar */
     }
 
     .mucd-map-left-section-result-container
@@ -24063,7 +22700,7 @@ td {
 
     .profiler-main-container-body-upper-left-section-searchbar
         .profiler-main-container-body-upper-left-section-searchbar-suggestionsBOX::-webkit-scrollbar {
-        width: 8px; /* Width of the scrollbar */
+        width: 6px; /* Width of the scrollbar */
     }
 
     .profiler-main-container-body-upper-left-section-searchbar
@@ -24244,17 +22881,6 @@ td {
     }
     .profiler-main-container-body-bottom-weapon-container-bottom-researchlinks
         .weapon-container-bottom-researchlinkBox-container {
-        display: flex;
-        flex-direction: column;
-        font-size: 12px;
-    }
-    .profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles
-        .weapon-container-bottom-relatedArticles-heading {
-        display: flex;
-        font-size: 14px;
-    }
-    .profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles
-        .weapon-container-bottom-relatedArticlesBox-container {
         display: flex;
         flex-direction: column;
         font-size: 12px;
@@ -25473,80 +24099,6 @@ td {
         position: relative;
         transition: 0.3s ease;
     }
-
-    .yourpt-main-container-contents-header-left-section h2 {
-        text-transform: capitalize;
-        color: var(--dark-grey);
-        font-size: 15px;
-        margin: 0px;
-    }
-    .yourpt-main-container-contents-header-left-section-count-text p {
-        font-size: 12px;
-        color: var(--light-black);
-        margin: 0px;
-    }
-    .yourpt-main-container-contents-header-right-section-filter-date-container .yourpt-viewer-custom-date-range-picker {
-        display: flex;
-        align-items: center;
-        font-size: 13px;
-        padding: 10px;
-        width: max-content;
-        border-radius: 6px;
-        outline: none;
-        background: var(--white);
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        border: 1px solid var(--blue-dark-bg);
-        transition: 0.3s ease;
-    }
-    .yourpt-viewer-custom-date-range-picker i:nth-child(1) {
-        font-size: 18px;
-        margin-left: 0px;
-        margin-right: 5px;
-    }
-    .yourpt-viewer-custom-date-range-picker i {
-        font-size: 13px;
-        margin-left: 10px;
-    }
-    .yourpt-main-container-contents-header-right-section-filter-date-container
-        .yourpt-viewer-date-range-clear-filter-btn {
-        padding: 10px;
-        font-size: 13px;
-        text-transform: capitalize;
-        background: var(--red-light-bg);
-        color: var(--red-dark-bg);
-        border: 1px solid var(--red-dark-bg);
-        border-radius: 6px;
-        cursor: pointer;
-        transition: 0.3s;
-    }
-    .yourpt-main-container-contents-details-container .report-cardbox {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-width: 270px;
-        padding: 20px;
-        font-size: 12px;
-        box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
-        background: var(--blue-lightest-bg);
-        color: var(--dark-grey);
-        border: 1px solid var(--blue-light-bg);
-        border-radius: 10px;
-        overflow: hidden;
-        position: relative;
-    }
-
-    .your_report_erro_info-text {
-        text-align: center;
-        font-size: 16px;
-        color: inherit;
-    }
-
-    .report-cardbox-info .report-cardbox-info-text {
-        text-align: center;
-        font-size: 16px;
-        color: var(--dark-grey);
-    }
     /* generate report page responsive code ends here */
 
     /* special report page responsive code starts here */
@@ -26134,7 +24686,7 @@ td {
     }
 
     .satshis-main-container::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
         visibility: hidden;
         transition: visibility 0.3s ease;
     }
@@ -26489,194 +25041,7 @@ td {
     .bottom-header-table-body-text-sm.font-mono {
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     }
-
     /* sat full timeline page code ends here */
-
-    /* patent page code starts here */
-
-    .patents-container-header .patents-container-header-left {
-        display: flex;
-        flex-direction: column;
-        font-size: 13px;
-    }
-    .patents-container-header-left .Title-highlight {
-        display: flex;
-        align-items: center;
-        width: 88px;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-searchbar {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        padding: 10px;
-        border-radius: 6px;
-        background: var(--light-grey);
-        color: var(--black);
-    }
-    .patents-container-header-right-filter-searchbar i {
-        font-size: 12px;
-        margin-left: 10px;
-        color: var(--dark-grey);
-    }
-    .patents-container-header-right-filter-searchbar input {
-        outline: none;
-        border: none;
-        background: inherit;
-        color: inherit;
-        font-size: 14px;
-        width: 250px;
-    }
-    .patents-container-header-right-filter-date-range-container
-        .patents-container-header-right-filter-custom-date-range-picker {
-        display: flex;
-        align-items: center;
-        padding: 10px;
-        border-radius: 6px;
-        font-size: 13px;
-        cursor: pointer;
-        background: var(--white);
-        color: var(--blue-dark-bg);
-        border: 1px solid var(--blue-dark-bg);
-        transition: 0.3s ease;
-    }
-    .patents-container-header-right-filter-custom-date-range-picker i:nth-child(1) {
-        font-size: 18px;
-        margin-left: 0px;
-        margin-right: 5px;
-    }
-    .patents-container-header-right-filter-custom-date-range-picker i {
-        font-size: 13px;
-        margin-left: 12px;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-search-button {
-        padding: 10px;
-        background: var(--white);
-        border-radius: 6px;
-        border: 1px solid var(--blue-dark-bg);
-        font-size: 13px;
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        transition: 0.3s ease;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-clear-button {
-        padding: 10px;
-        background: var(--white);
-        border-radius: 6px;
-        border: 1px solid var(--blue-dark-bg);
-        font-size: 13px;
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        transition: 0.3s ease;
-    }
-    .patents-container .patents-container-table-container {
-        height: calc(100% - 55px);
-        overflow-y: auto;
-        transition: 0.3s ease;
-    }
-    .patents-container-table-container .patent-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 12px;
-    }
-    .patents-container-table-container .patent-table th {
-        padding: 10px;
-        font-size: 14px;
-        text-transform: capitalize;
-        text-align: center;
-        border-collapse: collapse;
-    }
-    .patents-container-table-container .patent-table thead tr .patent-table-th-download {
-        text-align: center;
-        width: 190px;
-        max-width: 190px;
-    }
-    .patents-container-table-container .patent-table td {
-        background: var(--white);
-        color: var(--light-black);
-        padding: 11px 15px;
-        text-transform: capitalize;
-        border-collapse: collapse;
-    }
-    .patents-container-table-container .patent-table tbody tr .patent-table-td-download a {
-        text-decoration: none;
-        padding: 6px 12px;
-        color: var(--dark-grey);
-        border-radius: 6px;
-        border: 1px solid var(--dark-grey);
-    }
-    .patent-more-detail-container i {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        font-size: 24px;
-        color: var(--light-black);
-        cursor: pointer;
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-title {
-        font-size: 18px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-patent_number {
-        text-transform: capitalize;
-        font-size: 13px;
-        color: var(--dark-grey);
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-date {
-        font-size: 13px;
-        color: var(--dark-grey);
-    }
-    .patent-more-detail-container .patent-more-detail-container-middle {
-        display: flex;
-        flex-direction: row;
-        gap: 40px;
-        margin-top: 10px;
-    }
-    .patent-more-detail-container-middle-left .patent-more-detail-container-middle-left-title {
-        font-size: 16px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-middle-left .patent-more-detail-container-middle-left-imageBox {
-        height: auto;
-        width: 550px;
-        background: #f5f5f5;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-    }
-    .patent-more-detail-container-middle-right .patent-more-detail-container-middle-right-title {
-        font-size: 16px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-middle-right-contents .patent-fact-infoBOX {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        padding: 10px;
-        background: #f5f5f5;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-    }
-    .patent-fact-infoBOX .patent-fact-infoBOX-title {
-        font-size: 13px;
-        color: var(--dark-grey);
-    }
-    .patent-fact-infoBOX .patent-fact-infoBOX-details {
-        font-size: 15px;
-        color: var(--black);
-    }
-    .patent-more-detail-container-content-infoBOX .patent-more-detail-header {
-        font-size: 16px;
-        font-weight: bold;
-        text-transform: uppercase;
-        color: var(--blue-dark-bg);
-    }
-    .patent-more-detail-container-content-infoBOX .patent-more-detail-content {
-        font-size: 13px;
-    }
-
-    /* patent page code ends here */
 
     /* date range picker responsive code starts here */
     .daterangepicker .ranges ul {
@@ -27495,11 +25860,6 @@ td {
     .feeds_container.active {
         display: block;
     }
-    .feeds_container .feeds_container_header {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
     .feeds_container .Title-highlight {
         display: flex;
         align-items: center;
@@ -27708,7 +26068,7 @@ td {
     .overview-bottom-section-upper-container-left-section .Title-highlight {
         display: flex;
         align-items: center;
-        width: 164px;
+        width: 153px;
         margin-bottom: 20px;
     }
     .overview-bottom-section-upper-container-right-section
@@ -27870,64 +26230,10 @@ td {
         transition: 0.3s ease;
     }
     .overview-bottom-section .overview-bottom-section-bottom-container {
-        height: auto;
+        height: 540px;
         /*    width: 100%;*/
         margin-top: 10px;
     }
-
-    /* testing code of pie chart on home page code starts here */
-
-    .overview-bottom-section-upper-container-right-section .date-filter-container .date-filter-container-input {
-        padding: 8px 10px;
-        margin: 10px 0;
-        font-size: 14px;
-        color: var(--blue-dark-bg);
-        border: 1px solid var(--blue-dark-bg);
-        border-radius: 6px;
-        text-transform: uppercase;
-    }
-
-    .overview-bottom-section-upper-container-right-section .date-filter-container .date-filter-container-search-button {
-        padding: 8px 16px;
-        font-size: 14px;
-        cursor: pointer;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 4px;
-    }
-
-    .chart-container {
-        display: flex;
-        flex-wrap: nowrap;
-        justify-content: space-evenly;
-        gap: 190px;
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    .chart-wrapper {
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        padding: 20px;
-        width: 100%;
-        max-width: 500px;
-        min-width: 300px;
-    }
-    .chart-title {
-        text-align: center;
-        color: #2c3e50;
-        margin-bottom: 15px;
-        font-size: 18px;
-        font-weight: 500;
-    }
-    .chart {
-        width: 100%;
-        height: 400px;
-        position: relative;
-    }
-
-    /* testing code of pie chart on home page code ends here */
 
     /* feeds page responsive code starts here */
     .feeds-main-container-header .feeds-main-container-header-upper {
@@ -29111,6 +27417,7 @@ td {
         width: 18px;
         fill: var(--dark-grey);
         margin-left: 5px;
+        cursor: pointer;
         transition: 0.3s ease;
     }
     .social-media-highlights .social-media-highlights-comments-container {
@@ -29495,6 +27802,7 @@ td {
     }
     .mucd-map-header-filter-section i {
         font-size: 14px;
+        cursor: pointer;
     }
     .mucd-map-header-filter-section .mucd-map-header-filter-section-menu {
         background: var(--white);
@@ -29601,7 +27909,7 @@ td {
         transition: 0.3s ease;
     }
     .mucd-map-header-filter-section-region-option::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
     }
     .mucd-map-header-filter-section-region-option::-webkit-scrollbar-track {
         background: #f1f1f1;
@@ -29664,7 +27972,7 @@ td {
 
     .mucd-map-left-section-result-container
         .mucd-map-left-section-result-container-scroll-container::-webkit-scrollbar {
-        width: 5px; /* Width of the scrollbar */
+        width: 3px; /* Width of the scrollbar */
     }
 
     .mucd-map-left-section-result-container
@@ -30082,7 +28390,7 @@ td {
 
     .profiler-main-container-body-upper-left-section-searchbar
         .profiler-main-container-body-upper-left-section-searchbar-suggestionsBOX::-webkit-scrollbar {
-        width: 8px; /* Width of the scrollbar */
+        width: 6px; /* Width of the scrollbar */
     }
 
     .profiler-main-container-body-upper-left-section-searchbar
@@ -30263,17 +28571,6 @@ td {
     }
     .profiler-main-container-body-bottom-weapon-container-bottom-researchlinks
         .weapon-container-bottom-researchlinkBox-container {
-        display: flex;
-        flex-direction: column;
-        font-size: 14px;
-    }
-    .profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles
-        .weapon-container-bottom-relatedArticles-heading {
-        display: flex;
-        font-size: 15px;
-    }
-    .profiler-main-container-body-bottom-weapon-container-bottom-relatedArticles
-        .weapon-container-bottom-relatedArticlesBox-container {
         display: flex;
         flex-direction: column;
         font-size: 14px;
@@ -31449,79 +29746,6 @@ td {
         position: relative;
         transition: 0.3s ease;
     }
-
-    .yourpt-main-container-contents-header-left-section h2 {
-        text-transform: capitalize;
-        color: var(--dark-grey);
-        font-size: 15px;
-        margin: 0px;
-    }
-    .yourpt-main-container-contents-header-left-section-count-text p {
-        font-size: 12px;
-        color: var(--light-black);
-        margin: 0px;
-    }
-    .yourpt-main-container-contents-header-right-section-filter-date-container .yourpt-viewer-custom-date-range-picker {
-        display: flex;
-        align-items: center;
-        font-size: 14px;
-        padding: 10px;
-        width: max-content;
-        border-radius: 6px;
-        outline: none;
-        background: var(--white);
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        border: 1px solid var(--blue-dark-bg);
-        transition: 0.3s ease;
-    }
-    .yourpt-viewer-custom-date-range-picker i:nth-child(1) {
-        font-size: 18px;
-        margin-left: 0px;
-        margin-right: 5px;
-    }
-    .yourpt-viewer-custom-date-range-picker i {
-        font-size: 13px;
-        margin-left: 10px;
-    }
-    .yourpt-main-container-contents-header-right-section-filter-date-container
-        .yourpt-viewer-date-range-clear-filter-btn {
-        padding: 10px;
-        font-size: 14px;
-        text-transform: capitalize;
-        background: var(--red-light-bg);
-        color: var(--red-dark-bg);
-        border: 1px solid var(--red-dark-bg);
-        border-radius: 6px;
-        cursor: pointer;
-        transition: 0.3s;
-    }
-    .yourpt-main-container-contents-details-container .report-cardbox {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-width: 340px;
-        padding: 20px;
-        font-size: 13px;
-        box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
-        background: var(--blue-lightest-bg);
-        color: var(--dark-grey);
-        border: 1px solid var(--blue-light-bg);
-        border-radius: 10px;
-        overflow: hidden;
-        position: relative;
-    }
-    .your_report_erro_info-text {
-        text-align: center;
-        font-size: 18px;
-        color: inherit;
-    }
-
-    .report-cardbox-info .report-cardbox-info-text {
-        text-align: center;
-        font-size: 18px;
-        color: var(--dark-grey);
-    }
     /* generate report page responsive code ends here */
 
     /* special report page responsive code starts here */
@@ -31961,7 +30185,7 @@ td {
     }
 
     .satsdata-map-container-header-left .satsdata-map-header-searchbar-suggestionsBOX::-webkit-scrollbar {
-        width: 8px; /* Width of the scrollbar */
+        width: 6px; /* Width of the scrollbar */
     }
 
     .satsdata-map-container-header-left .satsdata-map-header-searchbar-suggestionsBOX::-webkit-scrollbar-track {
@@ -32342,194 +30566,6 @@ td {
 
     /* sat data page code ends here */
 
-    /* patent page code starts here */
-
-    .patents-container-header .patents-container-header-left {
-        display: flex;
-        flex-direction: column;
-        font-size: 14px;
-    }
-    .patents-container-header-left .Title-highlight {
-        display: flex;
-        align-items: center;
-        width: 93px;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-searchbar {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        padding: 10px;
-        border-radius: 6px;
-        background: var(--light-grey);
-        color: var(--black);
-    }
-    .patents-container-header-right-filter-searchbar i {
-        font-size: 14px;
-        margin-left: 10px;
-        color: var(--dark-grey);
-    }
-    .patents-container-header-right-filter-searchbar input {
-        outline: none;
-        border: none;
-        background: inherit;
-        color: inherit;
-        font-size: 14px;
-        width: 250px;
-    }
-    .patents-container-header-right-filter-date-range-container
-        .patents-container-header-right-filter-custom-date-range-picker {
-        display: flex;
-        align-items: center;
-        padding: 10px;
-        border-radius: 6px;
-        font-size: 14px;
-        cursor: pointer;
-        background: var(--white);
-        color: var(--blue-dark-bg);
-        border: 1px solid var(--blue-dark-bg);
-        transition: 0.3s ease;
-    }
-    .patents-container-header-right-filter-custom-date-range-picker i:nth-child(1) {
-        font-size: 18px;
-        margin-left: 0px;
-        margin-right: 5px;
-    }
-    .patents-container-header-right-filter-custom-date-range-picker i {
-        font-size: 13px;
-        margin-left: 12px;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-search-button {
-        padding: 10px;
-        background: var(--white);
-        border-radius: 6px;
-        border: 1px solid var(--blue-dark-bg);
-        font-size: 14px;
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        transition: 0.3s ease;
-    }
-    .patents-container-header-right-filters-container .patents-container-header-right-filter-clear-button {
-        padding: 10px;
-        background: var(--white);
-        border-radius: 6px;
-        border: 1px solid var(--blue-dark-bg);
-        font-size: 14px;
-        color: var(--blue-dark-bg);
-        cursor: pointer;
-        transition: 0.3s ease;
-    }
-    .patents-container .patents-container-table-container {
-        height: calc(100% - 55px);
-        overflow-y: auto;
-        transition: 0.3s ease;
-    }
-    .patents-container-table-container .patent-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 12px;
-    }
-    .patents-container-table-container .patent-table th {
-        padding: 10px;
-        font-size: 16px;
-        text-transform: capitalize;
-        text-align: center;
-        border-collapse: collapse;
-    }
-    .patents-container-table-container .patent-table th {
-        padding: 10px;
-        font-size: 16px;
-        text-transform: capitalize;
-        text-align: center;
-        border-collapse: collapse;
-    }
-    .patents-container-table-container .patent-table thead tr .patent-table-th-download {
-        text-align: center;
-        width: 190px;
-        max-width: 190px;
-    }
-    .patents-container-table-container .patent-table td {
-        background: var(--white);
-        color: var(--light-black);
-        padding: 11px 15px;
-        text-transform: capitalize;
-        border-collapse: collapse;
-        font-size: 15px;
-    }
-    .patents-container-table-container .patent-table tbody tr .patent-table-td-download a {
-        text-decoration: none;
-        padding: 6px 12px;
-        color: var(--dark-grey);
-        border-radius: 6px;
-        border: 1px solid var(--dark-grey);
-    }
-    .patent-more-detail-container i {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        font-size: 24px;
-        color: var(--light-black);
-        cursor: pointer;
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-title {
-        font-size: 20px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-patent_number {
-        text-transform: capitalize;
-        font-size: 14px;
-        color: var(--dark-grey);
-    }
-    .patent-more-detail-container-header .patent-more-detail-container-header-date {
-        font-size: 14px;
-        color: var(--dark-grey);
-    }
-    .patent-more-detail-container-middle-left .patent-more-detail-container-middle-left-title {
-        font-size: 17px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-middle-left .patent-more-detail-container-middle-left-imageBox {
-        height: auto;
-        width: 600px;
-        background: #f5f5f5;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-    }
-    .patent-more-detail-container-middle-right .patent-more-detail-container-middle-right-title {
-        font-size: 17px;
-        font-weight: bold;
-        text-transform: capitalize;
-    }
-    .patent-more-detail-container-middle-right-contents .patent-fact-infoBOX {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        padding: 10px 15px;
-        background: #f5f5f5;
-        border-radius: 10px;
-        border: 1px solid #e0e0e0;
-    }
-    .patent-fact-infoBOX .patent-fact-infoBOX-title {
-        font-size: 14px;
-        color: var(--dark-grey);
-    }
-    .patent-fact-infoBOX .patent-fact-infoBOX-details {
-        font-size: 16px;
-        color: var(--black);
-    }
-    .patent-more-detail-container-content-infoBOX .patent-more-detail-header {
-        font-size: 18px;
-        font-weight: bold;
-        text-transform: uppercase;
-        color: var(--blue-dark-bg);
-    }
-    .patent-more-detail-container-content-infoBOX .patent-more-detail-content {
-        font-size: 15px;
-    }
-
-    /* patent page code ends here */
-
     /* date range picker responsive code starts here */
     .daterangepicker .ranges ul {
         width: 140px;
@@ -32615,3 +30651,160 @@ td {
 }
 
 /* responsiveness code ends here */
+.summary-title {
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.summary-card {
+    padding: 12px;
+    margin-bottom: 12px;
+}
+.ai-summary-section {
+    /* display: none; */
+}
+.feeds-data-reference .read-more:hover {
+    background-color: var(--blue-dark-bg);
+    color: white;
+    text-decoration: none;
+}
+#tab-details {
+    font-size: 20px;
+    width: 150px;
+    height: 50px;
+    text-align: center;
+    padding-top: 10px;
+    border-radius: 5px;
+}
+#tab-details.active {
+    background-color: #cde1fd;
+}
+#tab-summary {
+    font-size: 20px;
+    width: 150px;
+    height: 50px;
+    text-align: center;
+    padding-top: 10px;
+    border-radius: 5px;
+}
+#tab-summary.active {
+    background-color: #cde1fd;
+}
+.date-picker {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px 8px;
+    background-color: #fff;
+    gap: 6px; /* space between items */
+    margin-left: 220px;
+}
+
+/* Hide dd/mm/yyyy */
+#dateFilter::-webkit-datetime-edit {
+    display: none;
+}
+
+/* Keep calendar icon */
+#dateFilter::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    cursor: pointer;
+}
+
+/* Date input styling */
+#dateFilter {
+    border: none;
+    background-color: transparent;
+    height: 28px;
+    cursor: pointer;
+}
+
+/* Clear button styling */
+.date-picker button {
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    color: #007bff;
+    font-size: 13px;
+}
+
+/* Hover effect for the whole box */
+.date-picker:hover {
+    border-color: #66afe9;
+    box-shadow: 0 0 4px rgba(102, 175, 233, 0.6);
+}
+
+.date-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-family: Arial, sans-serif;
+    max-width: 300px;
+    margin: 20px;
+}
+
+label {
+    font-weight: bold;
+}
+
+input[type="date"] {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+button {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    background-color: #f1f1f1;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #ddd;
+}
+.aisummary-card {
+    max-height: 400px;
+    overflow-y: scroll;
+}
+.ai-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+}
+
+.ai-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.ai-title img {
+    margin-left: 10px;
+}
+
+.date-range-dropdown select {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.date-range-dropdown select:hover {
+    border-color: #888;
+}
+
+.date-range-dropdown select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 4px rgba(0, 123, 255, 0.4);
+}
